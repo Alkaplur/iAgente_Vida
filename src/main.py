@@ -1,5 +1,9 @@
 from graph import graph
 from models import EstadoBot, Cliente, EstadoConversacion
+from agents.instructions_loader import _cache_instrucciones
+
+# Limpio cache de instrucciones al iniciar
+_cache_instrucciones.clear()
 
 def conversacion_interactiva():
     """Conversación real donde el usuario escribe las respuestas"""

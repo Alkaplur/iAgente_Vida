@@ -1,36 +1,45 @@
 from pydantic_ai import Agent
 from models import Cliente, ContextoConversacional
+from config import settings
+from agents.instructions_loader import cargar_instrucciones_cached
 import asyncio
 import re
 
-# Agente especializado en extracción contextual
+# Agente especializado en extracción contextual - USA CONFIG E INSTRUCCIONES
+def _get_model_string():
+    """Obtiene el modelo string según la configuración"""
+    if settings.llm_provider == "openai":
+        return f"openai:{settings.llm_model}"
+    elif settings.llm_provider == "groq":
+        return f"groq:{settings.llm_model}"
+    else:
+        return f"openai:gpt-4o-mini"  # fallback
+
+# Cargar instrucciones desde archivo
+def _get_extractor_instructions():
+    """Obtiene las instrucciones del extractor desde archivo"""
+    try:
+        # Cargar instrucciones desde archivo txt
+        import os
+        instructions_path = os.path.join(
+            os.path.dirname(__file__), 
+            'agents_instructions', 
+            'extractor_instructions.txt'
+        )
+        with open(instructions_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        print(f"⚠️ Error cargando instrucciones del extractor: {e}")
+        return """
+        Eres un extractor de datos de clientes para seguros de vida.
+        Extrae información precisa manteniendo los datos existentes intactos.
+        Solo actualiza campos con información nueva y explícita.
+        """
+
 extractor_agent = Agent(
-    'groq:llama-3.3-70b-versatile',
+    _get_model_string(),
     result_type=Cliente,
-    system_prompt="""
-    Eres un extractor de datos de clientes CONTEXTUAL para seguros de vida.
-    
-    REGLAS CRÍTICAS:
-    - Mantén SIEMPRE los datos existentes intactos
-    - Solo actualiza campos con información nueva y explícita
-    - Si no hay información nueva para un campo, NO lo cambies
-    - El id_cliente NUNCA debe cambiar
-    - PRIORIZA el contexto conversacional para interpretar respuestas cortas
-    
-    Busca información específica sobre:
-    - nombre: nombres completos mencionados
-    - edad: números seguidos de "años" (18-80 años válido)
-    - profesion: trabajos mencionados
-    - ingresos_mensuales: cantidades de dinero como salario (solo números, en euros)
-    - num_dependientes: número de hijos/personas a cargo (0-10 válido)
-    - estado_civil: soltero, casado, viudo, divorciado
-    - nivel_ahorro: dinero que puede destinar mensualmente al seguro
-    
-    INTERPRETACIÓN CONTEXTUAL:
-    - Si se está esperando una respuesta específica, prioriza esa interpretación
-    - Números solos pueden ser respuestas a preguntas sobre edad, dependientes, ingresos
-    - Nombres pueden ser respuestas a "¿cómo te llamas?"
-    """
+    system_prompt=_get_extractor_instructions()
 )
 
 def extraer_datos_cliente(cliente: Cliente, mensaje: str, contexto: ContextoConversacional) -> tuple[Cliente, bool]:
@@ -46,30 +55,35 @@ def extraer_datos_cliente(cliente: Cliente, mensaje: str, contexto: ContextoConv
         tuple[Cliente actualizado, bool indicando si hubo cambios]
     """
     
-    print(f"🔍 EXTRACTOR CONTEXTUAL: Analizando '{mensaje}'")
     
-    # PASO 1: Intentar interpretación contextual PRIMERO
+    # PASO 1: Intentar interpretación contextual PRIMERO (respuestas directas)
     if contexto.esperando_respuesta and contexto.ultimo_campo_solicitado:
         cliente_contextual, cambio_contextual = _interpretar_con_contexto(
             cliente, mensaje, contexto
         )
         if cambio_contextual:
-            print(f"✅ CONTEXTUAL: {contexto.ultimo_campo_solicitado} = {mensaje}")
             return cliente_contextual, True
     
-    # PASO 2: Interpretación con IA como fallback
-    cliente_actualizado = _extraer_con_ia(cliente, mensaje, contexto)
+    # PASO 2: EXTRACCIÓN CON LLM (PRINCIPAL) - Instrucciones inteligentes
+    try:
+        cliente_actualizado = _extraer_con_ia(cliente, mensaje, contexto)
+        cambios = _detectar_cambios(cliente, cliente_actualizado)
+        hubo_cambios = len(cambios) > 0
+        
+        if hubo_cambios:
+            return cliente_actualizado, True
+    except Exception as e:
+        print(f"⚠️ LLM EXTRACTOR falló: {e}, usando fallback...")
     
-    # PASO 3: Detectar cambios
-    cambios = _detectar_cambios(cliente, cliente_actualizado)
-    hubo_cambios = len(cambios) > 0
+    # PASO 3: FALLBACK - Extracción por patrones (solo si LLM falla)
+    cliente_con_patrones = _extraer_con_patrones(cliente, mensaje)
+    cambios_patrones = _detectar_cambios(cliente, cliente_con_patrones)
     
-    if hubo_cambios:
-        print(f"✅ IA EXTRACTOR: Cambios detectados: {', '.join(cambios)}")
-    else:
-        print("📝 EXTRACTOR: No se encontró información nueva")
+    if cambios_patrones:
+        return cliente_con_patrones, True
     
-    return cliente_actualizado, hubo_cambios
+    # PASO 4: Si nada funciona, retornar sin cambios
+    return cliente, False
 
 def _interpretar_con_contexto(cliente: Cliente, mensaje: str, contexto: ContextoConversacional) -> tuple[Cliente, bool]:
     """
@@ -92,6 +106,14 @@ def _interpretar_con_contexto(cliente: Cliente, mensaje: str, contexto: Contexto
                 if 0 <= valor <= 10:
                     cliente_dict["num_dependientes"] = valor
                     return Cliente(**cliente_dict), True
+            # Patrones adicionales para dependientes
+            elif "hijo" in mensaje_limpio.lower():
+                numeros = re.findall(r'\d+', mensaje_limpio)
+                if numeros:
+                    valor = int(numeros[0])
+                    if 0 <= valor <= 10:
+                        cliente_dict["num_dependientes"] = valor
+                        return Cliente(**cliente_dict), True
                     
         elif campo == "edad":
             # Esperamos un número para edad
@@ -100,6 +122,14 @@ def _interpretar_con_contexto(cliente: Cliente, mensaje: str, contexto: Contexto
                 if 18 <= valor <= 80:
                     cliente_dict["edad"] = valor
                     return Cliente(**cliente_dict), True
+            # Patrones adicionales para edad
+            elif "año" in mensaje_limpio.lower():
+                numeros = re.findall(r'\d+', mensaje_limpio)
+                if numeros:
+                    valor = int(numeros[0])
+                    if 18 <= valor <= 80:
+                        cliente_dict["edad"] = valor
+                        return Cliente(**cliente_dict), True
                     
         elif campo == "ingresos_mensuales":
             # Esperamos número o cantidad en euros
@@ -134,8 +164,188 @@ def _interpretar_con_contexto(cliente: Cliente, mensaje: str, contexto: Contexto
     except Exception as e:
         print(f"⚠️ Error en interpretación contextual: {e}")
     
+    # FALLBACK: Extracción sin contexto usando patrones
+    cliente_extraido = _extraer_con_patrones(cliente, mensaje_limpio)
+    cambios = _detectar_cambios(cliente, cliente_extraido)
+    
+    if cambios:
+        print(f"✅ PATRONES: Extraídos {len(cambios)} datos")
+        return cliente_extraido, True
+    
     print(f"❌ CONTEXTO: No se pudo interpretar '{mensaje_limpio}' como {campo}")
     return cliente, False
+
+def _extraer_con_patrones(cliente: Cliente, mensaje: str) -> Cliente:
+    """
+    Extrae información usando patrones de texto (sin API)
+    """
+    
+    # Crear copia del cliente para modificar
+    cliente_dict = cliente.model_dump()
+    mensaje_lower = mensaje.lower()
+    
+    # Extraer nombre
+    if not cliente_dict.get("nombre"):
+        # Patrones para nombres (orden específico para evitar conflictos)
+        patrones_nombre = [
+            r"se llama\s+([a-záéíóúñ]+)",
+            r"su nombre es\s+([a-záéíóúñ]+)",
+            r"mi nombre es\s+([a-záéíóúñ]+)",
+            r"nombre\s+(?:es\s+)?([a-záéíóúñ]+)",
+            r"soy\s+([a-záéíóúñ]+)",
+            # Evitar capturar "quiere" como nombre
+            r"(?:cliente|paciente)\s+(?:se\s+)?(?:llama\s+)?([a-záéíóúñ]+)(?!\s+quiere)"
+        ]
+        
+        for patron in patrones_nombre:
+            match = re.search(patron, mensaje_lower)
+            if match:
+                nombre = match.group(1).strip()
+                # Filtrar palabras que no son nombres
+                palabras_excluidas = ['quiere', 'necesita', 'tiene', 'busca', 'desea', 'pide', 'solicita']
+                if (len(nombre) >= 2 and nombre.isalpha() and 
+                    nombre not in palabras_excluidas):
+                    cliente_dict["nombre"] = nombre.title()
+                    break
+    
+    # Extraer edad
+    if not cliente_dict.get("edad"):
+        # Patrones para edad
+        patrones_edad = [
+            r"(\d+)\s+años?",
+            r"edad\s+(?:es\s+)?(\d+)",
+            r"tiene\s+(\d+)\s+años?",
+            r"tengo\s+(\d+)\s+años?"
+        ]
+        
+        for patron in patrones_edad:
+            match = re.search(patron, mensaje_lower)
+            if match:
+                edad = int(match.group(1))
+                if 18 <= edad <= 80:
+                    cliente_dict["edad"] = edad
+                    break
+    
+    # Extraer dependientes
+    if cliente_dict.get("num_dependientes") is None:
+        # Patrones para dependientes
+        patrones_dependientes = [
+            r"(\d+)\s+hijos?",
+            r"(\d+)\s+dependientes?",
+            r"tiene\s+(\d+)\s+hijos?",
+            r"tengo\s+(\d+)\s+hijos?",
+            r"sin\s+hijos?" # 0 hijos
+        ]
+        
+        for patron in patrones_dependientes:
+            match = re.search(patron, mensaje_lower)
+            if match:
+                if "sin" in patron:
+                    cliente_dict["num_dependientes"] = 0
+                else:
+                    dependientes = int(match.group(1))
+                    if 0 <= dependientes <= 10:
+                        cliente_dict["num_dependientes"] = dependientes
+                break
+    
+    # Extraer ingresos
+    if not cliente_dict.get("ingresos_mensuales"):
+        # Patrones para ingresos en euros y USD (mensuales y anuales)
+        patrones_ingresos = [
+            # Anuales
+            r"(\d+)\s*(eur|euros?)\s*al\s*(anio|año)",
+            r"(\d+)\s*(usd|dólares?|dollars?)\s*al\s*(anio|año)",
+            r"ingreso[s]?\s*[,]?\s*(?:de\s+)?(?:unos\s+)?(\d+)\s*(eur|euros?)\s*al\s*(anio|año)",
+            r"gana\s+(?:unos\s+)?(\d+)\s*(eur|euros?)\s*al\s*(anio|año)",
+            # Mensuales
+            r"(\d+)\s*(eur|euros?)\s*(?:al\s+mes|mensuales?)",
+            r"(\d+)\s*(usd|dólares?|dollars?)\s*(?:al\s+mes|mensuales?)",
+            r"ingreso[s]?\s*[,]?\s*(?:de\s+)?(?:unos\s+)?(\d+)\s*(eur|euros?)\s*(?:al\s+mes|mensuales?)?",
+            r"gana\s+(?:unos\s+)?(\d+)\s*(eur|euros?|usd|dólares?)",
+            r"(\d+)\s*€\s*(?:al\s+mes|mensuales?)?"
+        ]
+        
+        for patron in patrones_ingresos:
+            match = re.search(patron, mensaje_lower)
+            if match:
+                ingresos = int(match.group(1))
+                moneda = match.group(2) if len(match.groups()) > 1 and match.group(2) else ""
+                
+                # Detectar si son ingresos anuales por el tercer grupo o el texto completo
+                texto_completo = match.group(0)
+                es_anual = (len(match.groups()) > 2 and match.group(3) and 
+                           any(palabra in match.group(3) for palabra in ['año', 'anio'])) or \
+                          any(palabra in texto_completo for palabra in ['año', 'anio'])
+                
+                # Convertir anuales a mensuales
+                if es_anual:
+                    ingresos_mensuales = ingresos / 12
+                else:
+                    ingresos_mensuales = ingresos
+                
+                # Convertir USD a EUR (tasa aproximada 1 USD = 0.92 EUR)
+                if moneda and any(m in moneda.lower() for m in ['usd', 'dólar', 'dollar']):
+                    ingresos_eur = int(ingresos_mensuales * 0.92)  # Conversión USD a EUR
+                else:
+                    ingresos_eur = int(ingresos_mensuales)
+                
+                if 100 <= ingresos_eur <= 50000:  # Reducir mínimo para ingresos anuales bajos
+                    cliente_dict["ingresos_mensuales"] = float(ingresos_eur)
+                    break
+    
+    # Extraer profesión
+    if not cliente_dict.get("profesion"):
+        # Patrones para profesión
+        patrones_profesion = [
+            r"trabaja\s+como\s+([a-záéíóúñ]+)",
+            r"es\s+([a-záéíóúñ]+)",
+            r"profesión\s+([a-záéíóúñ]+)",
+            r"soy\s+([a-záéíóúñ]+)"
+        ]
+        
+        for patron in patrones_profesion:
+            match = re.search(patron, mensaje_lower)
+            if match:
+                profesion = match.group(1).strip()
+                if len(profesion) >= 3:
+                    cliente_dict["profesion"] = profesion
+                    break
+    
+    # Extraer compromisos financieros
+    if not cliente_dict.get("compromisos_financieros"):
+        # Patrones para compromisos financieros (incluyendo errores tipográficos)
+        patrones_compromisos = [
+            r"hipet?e?ca\s+(?:de\s+(?:unos\s+)?)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?",
+            r"hipoteca\s+(?:de\s+(?:unos\s+)?)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?",
+            r"préstamo\s+(?:de\s+(?:unos\s+)?)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?",
+            r"deuda\s+(?:de\s+(?:unos\s+)?)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?",
+            r"paga\s+(?:unos\s+)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?\s*(?:de\s+)?(?:hipet?e?ca|hipoteca|préstamo|deuda)",
+            r"debe\s+(?:unos\s+)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?",
+            r"tiene\s+(?:una\s+)?hipet?e?ca\s+(?:de\s+(?:unos\s+)?)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?",
+            r"tiene\s+(?:una\s+)?hipoteca\s+(?:de\s+(?:unos\s+)?)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?",
+            r"compromiso\s+(?:de\s+(?:unos\s+)?)?([0-9.,]+)\s*(usd|eur|euros?|dólares?|pesos?|ars)?"
+        ]
+        
+        for patron in patrones_compromisos:
+            match = re.search(patron, mensaje_lower)
+            if match:
+                monto = match.group(1).replace(",", "").replace(".", "")
+                moneda = match.group(2) if match.group(2) else ""
+                
+                # Construir texto del compromiso
+                if "hipet" in patron or "hipoteca" in patron:
+                    compromiso = f"hipoteca {monto} {moneda}".strip()
+                elif "préstamo" in patron:
+                    compromiso = f"préstamo {monto} {moneda}".strip()
+                elif "deuda" in patron:
+                    compromiso = f"deuda {monto} {moneda}".strip()
+                else:
+                    compromiso = f"compromiso financiero {monto} {moneda}".strip()
+                
+                cliente_dict["compromisos_financieros"] = compromiso
+                break
+    
+    return Cliente(**cliente_dict)
 
 def _extraer_con_ia(cliente: Cliente, mensaje: str, contexto: ContextoConversacional) -> Cliente:
     """
@@ -147,24 +357,61 @@ def _extraer_con_ia(cliente: Cliente, mensaje: str, contexto: ContextoConversaci
         contexto_info = f"\nCONTEXTO IMPORTANTE: Se acaba de preguntar por '{contexto.ultimo_campo_solicitado}'. Si el mensaje parece ser una respuesta a eso, prioriza esa interpretación."
     
     prompt = f"""
-    Cliente actual con todos sus datos existentes:
-    {cliente.model_dump()}
+    DATOS ACTUALES DEL CLIENTE (CONSERVAR TODOS):
+    - Nombre: {cliente.nombre}
+    - Edad: {cliente.edad}
+    - Num_dependientes: {cliente.num_dependientes}
+    - Ingresos_mensuales: {cliente.ingresos_mensuales}
+    - Profesion: {cliente.profesion}
+    - Estado_civil: {cliente.estado_civil}
+    - Compromisos_financieros: {cliente.compromisos_financieros}
+    - ID: {cliente.id_cliente}
     
     Nuevo mensaje del cliente: "{mensaje}"
     {contexto_info}
     
-    Instrucciones:
-    1. Analiza el mensaje buscando información nueva sobre el cliente
-    2. Actualiza SOLO los campos donde encuentres información explícita
-    3. Mantén todos los datos existentes que no se mencionen
-    4. CRÍTICO: El id_cliente debe mantenerse igual: "{cliente.id_cliente}"
+    INSTRUCCIONES CRÍTICAS:
+    1. MANTÉN TODOS los datos existentes que no sean None
+    2. SOLO actualiza campos donde encuentres información nueva y explícita
+    3. NUNCA sobrescribas datos existentes con None
+    4. NUNCA cambies el id_cliente
+    5. Si no encuentras información nueva, devuelve el cliente tal como está
     
-    Devuelve el objeto Cliente completo con los datos actualizados.
+    IMPORTANTE - COMPROMISOS FINANCIEROS:
+    Busca menciones de hipotecas, préstamos, deudas, pagos mensuales. Ejemplos:
+    - "hipoteca 600 USD" → compromisos_financieros: "hipoteca 600 USD"
+    - "paga 500 euros de préstamo" → compromisos_financieros: "préstamo 500 euros"
+    - "tiene una deuda de 1000 pesos" → compromisos_financieros: "deuda 1000 pesos"
+    
+    Devuelve el objeto Cliente completo MANTENIENDO todos los datos existentes.
     """
     
     try:
         result = asyncio.run(extractor_agent.run(prompt))
-        return result.data
+        
+        # Validar que no se perdieron datos
+        extracted_client = result.data
+        
+        # Conservar datos existentes si el extractor los perdió
+        if cliente.nombre and not extracted_client.nombre:
+            extracted_client.nombre = cliente.nombre
+        if cliente.edad and not extracted_client.edad:
+            extracted_client.edad = cliente.edad
+        if cliente.num_dependientes is not None and extracted_client.num_dependientes is None:
+            extracted_client.num_dependientes = cliente.num_dependientes
+        if cliente.ingresos_mensuales and not extracted_client.ingresos_mensuales:
+            extracted_client.ingresos_mensuales = cliente.ingresos_mensuales
+        if cliente.profesion and not extracted_client.profesion:
+            extracted_client.profesion = cliente.profesion
+        if cliente.estado_civil and not extracted_client.estado_civil:
+            extracted_client.estado_civil = cliente.estado_civil
+        if cliente.compromisos_financieros and not extracted_client.compromisos_financieros:
+            extracted_client.compromisos_financieros = cliente.compromisos_financieros
+        if cliente.id_cliente and not extracted_client.id_cliente:
+            extracted_client.id_cliente = cliente.id_cliente
+            
+        return extracted_client
+        
     except Exception as e:
         print(f"⚠️ EXTRACTOR IA: Error: {e}")
         return cliente
@@ -191,7 +438,7 @@ def _detectar_cambios(cliente_original: Cliente, cliente_actualizado: Cliente) -
     
     campos_importantes = [
         'nombre', 'edad', 'num_dependientes', 'ingresos_mensuales', 
-        'profesion', 'estado_civil', 'nivel_ahorro'
+        'profesion', 'estado_civil', 'nivel_ahorro', 'compromisos_financieros'
     ]
     
     for campo in campos_importantes:
@@ -243,16 +490,4 @@ def resetear_contexto_pregunta(contexto: ContextoConversacional) -> ContextoConv
     contexto.intentos_pregunta_actual = 0
     contexto.tipo_respuesta_esperada = None
     contexto.confirmacion_pendiente = None
-    return contexto
-    """
-    Resetea el contexto después de obtener una respuesta válida
-    """
-    
-    contexto.ultimo_campo_solicitado = None
-    contexto.ultima_pregunta = None
-    contexto.esperando_respuesta = False
-    contexto.intentos_pregunta_actual = 0
-    contexto.tipo_respuesta_esperada = None
-    contexto.confirmacion_pendiente = None
-    
     return contexto

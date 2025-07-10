@@ -5,21 +5,18 @@ Utilidad para cargar instrucciones de archivos txt de manera consistente
 import os
 from typing import Dict
 
+
 def cargar_instrucciones(agente: str) -> str:
     # Construir path relativo al directorio del archivo actual
     current_dir = os.path.dirname(__file__)
     archivo_instrucciones = os.path.join(current_dir, "agents_instructions", f"{agente}_instructions.txt")
     
-    print(f"🔍 Buscando: {archivo_instrucciones}")  # Debug
-    
     try:
         with open(archivo_instrucciones, 'r', encoding='utf-8') as f:
             instrucciones = f.read().strip()
-            print(f"✅ Instrucciones cargadas para {agente}")
             return instrucciones
     
     except FileNotFoundError:  
-        print(f"⚠️ Archivo {archivo_instrucciones} no encontrado")
         return _get_fallback_instructions(agente)
 
     except Exception as e: 

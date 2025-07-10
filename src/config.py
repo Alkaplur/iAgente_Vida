@@ -2,12 +2,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 from typing import Optional
 
-load_dotenv()
+# Forzar recarga de .env
+load_dotenv(override=True)
 
 class Settings(BaseSettings):
     # LLM Configuration
-    llm_provider: str
-    llm_model: str
+    llm_provider: str = "openai"
+    llm_model: str = "gpt-4o-mini"
     
     # API Keys
     groq_api_key: str
@@ -31,7 +32,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
-        env_file_encoding='utf-8'
+        env_file_encoding='utf-8',
+        extra='ignore'  # Ignorar variables extra del .env
     )
 
 # Crear una instancia de Settings

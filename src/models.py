@@ -37,6 +37,7 @@ class Cliente(BaseModel):
     # Objetivos y preferencias
     objetivos_financieros: Optional[str] = None
     herencia_fiscal: Optional[str] = None
+    presupuesto_maximo_mensual: Optional[float] = None
     
     # Salud
     salud_relevante: Optional[str] = None
@@ -58,13 +59,13 @@ class Cotizacion(BaseModel):
     aseguradora: str
 
 class ContextoConversacional(BaseModel):
-    """Nuevo: Contexto para seguimiento conversacional"""
     ultimo_campo_solicitado: Optional[str] = None
     ultima_pregunta: Optional[str] = None
     esperando_respuesta: bool = False
     intentos_pregunta_actual: int = 0
     tipo_respuesta_esperada: Optional[str] = None  # "numero", "texto", "si_no"
     confirmacion_pendiente: Optional[str] = None
+    instrucciones_agente: Optional[str] = None   
 
 class EstadoBot(BaseModel):
     # Estado actual
@@ -89,4 +90,5 @@ class EstadoBot(BaseModel):
     
     # Control del flujo
     agente_activo: Optional[str] = None
+    next_agent: Optional[str] = None  # CRÍTICO para el routing de LangGraph
     completitud_datos: float = 0.0

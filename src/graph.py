@@ -15,8 +15,8 @@ from agents.llm_client import get_llm_response
 if os.getenv("LANGCHAIN_TRACING_V2"):
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
 
-# Cliente Groq
-if settings.use_openai:
+# Seleccion del cliente
+if settings.llm_provider.lower() == "openai":
     from openai import OpenAI
     client = OpenAI(api_key=settings.openai_api_key)
 else:
@@ -169,33 +169,63 @@ def quote_node(state: EstadoBot) -> Dict[str, Any]:
     - Recomendación de producto del needs-based selling
     """
     
-    print(f"💰 QUOTE AGENT: Generando cotizaciones")
-    print(f"   Cliente: {state.cliente.nombre}")
-    print(f"   Recomendación: {state.recomendacion_producto.tipo_cobertura if state.recomendacion_producto else 'Sin recomendación'}")
+    print(f"💰 QUOTE AGENT: {state.cliente.nombre}")
     
     # Importar y usar el cotizador
     from agents.quote import calcular_cotizaciones, generar_presentacion
     
     try:
-        # Generar cotizaciones basadas en cliente + recomendación
-        cotizaciones = calcular_cotizaciones(state.cliente, state.recomendacion_producto)
+        # Verificar si el orquestador indica ajuste de precio por objeción
+        ajustar_precio = False
+        presupuesto_objetivo = None
+        
+        if hasattr(state.contexto, 'instrucciones_agente') and state.contexto.instrucciones_agente:
+            instrucciones = state.contexto.instrucciones_agente.lower()
+            if any(palabra in instrucciones for palabra in ['muy caro', 'ajusta', 'económico', 'más barato', 'reducir', 'baja', 'menos']):
+                ajustar_precio = True
+                print(f"   🔧 PRECIO AJUSTADO: Generando opciones más económicas por objeción")
+        elif hasattr(state.contexto, '__dict__') and 'instrucciones_agente' in state.contexto.__dict__:
+            instrucciones = state.contexto.__dict__['instrucciones_agente'].lower()
+            if any(palabra in instrucciones for palabra in ['muy caro', 'ajusta', 'económico', 'más barato', 'reducir', 'baja', 'menos']):
+                ajustar_precio = True
+                print(f"   🔧 PRECIO AJUSTADO: Generando opciones más económicas por objeción")
+        
+        # También verificar en el mensaje del usuario directamente
+        mensaje_usuario = state.mensaje_usuario.lower()
+        if any(palabra in mensaje_usuario for palabra in ['70 euros', '60 euros', '80 euros', 'euros al mes', 'baja', 'reducir', 'ajustar']):
+            ajustar_precio = True
+            
+            # Intentar extraer presupuesto específico
+            import re
+            match = re.search(r'(\d+)\s*euros?\s*al\s*mes', mensaje_usuario)
+            if match:
+                presupuesto_objetivo = float(match.group(1))
+        
+        # Generar cotizaciones basadas en cliente + recomendación (con ajuste si es necesario)
+        cotizaciones = calcular_cotizaciones(state.cliente, state.recomendacion_producto, ajustar_precio, presupuesto_objetivo)
         
         # Generar presentación de las cotizaciones
         mensaje_cotizaciones = generar_presentacion(state.cliente, cotizaciones)
         
-        print(f"   Acción: {len(cotizaciones)} cotizaciones generadas")
         
+        # CAMBIO CLAVE: Mantener etapa en COTIZACION para que el usuario pueda responder
         return {
             "respuesta_bot": mensaje_cotizaciones,
+            "cliente": state.cliente,  # Mantener cliente
             "cotizaciones": cotizaciones,
-            "etapa": EstadoConversacion.PRESENTACION_PROPUESTA
+            "recomendacion_producto": state.recomendacion_producto,  # Mantener recomendación
+            "etapa": EstadoConversacion.COTIZACION,  # MANTENER en cotización hasta que el usuario responda
+            "contexto": state.contexto,  # Mantener contexto
+            "mensajes": state.mensajes + [{"bot": mensaje_cotizaciones}] if state.mensajes else [{"bot": mensaje_cotizaciones}]
         }
         
     except Exception as e:
         print(f"⚠️ Error generando cotizaciones: {e}")
         return {
             "respuesta_bot": f"Disculpa {state.cliente.nombre}, estoy teniendo un problema técnico generando las cotizaciones. ¿Podrías darme un momento?",
-            "etapa": EstadoConversacion.COTIZACION
+            "cliente": state.cliente,
+            "etapa": EstadoConversacion.COTIZACION,
+            "contexto": state.contexto
         }
 
 def presentador_node(state: EstadoBot) -> Dict[str, Any]:
@@ -207,17 +237,19 @@ def presentador_node(state: EstadoBot) -> Dict[str, Any]:
     - Guiar hacia el cierre
     """
     
-    print(f"📊 PRESENTADOR: Manejando presentación")
-    print(f"   Cliente: {state.cliente.nombre}")
-    print(f"   Cotizaciones disponibles: {len(state.cotizaciones)}")
-    print(f"   Mensaje: '{state.mensaje_usuario}'")
+    print(f"📊 PRESENTADOR: {state.cliente.nombre} | {len(state.cotizaciones)} cotizaciones")
     
     # Analizar qué necesita el cliente
     respuesta = _manejar_presentacion_y_dudas(state)
     
     return {
         "respuesta_bot": respuesta,
-        "etapa": EstadoConversacion.PRESENTACION_PROPUESTA
+        "cliente": state.cliente,  # Mantener cliente
+        "cotizaciones": state.cotizaciones,  # Mantener cotizaciones
+        "recomendacion_producto": state.recomendacion_producto,  # Mantener recomendación
+        "etapa": EstadoConversacion.PRESENTACION_PROPUESTA,
+        "contexto": state.contexto,  # Mantener contexto
+        "mensajes": state.mensajes + [{"usuario": state.mensaje_usuario}, {"bot": respuesta}] if state.mensajes else [{"usuario": state.mensaje_usuario}, {"bot": respuesta}]
     }
 
 # ============= FUNCIONES AUXILIARES =============
@@ -320,12 +352,12 @@ Usa las técnicas de las instrucciones para crear urgencia y conectar emocionalm
 """
     
     try:
-        response = get_llm_response(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=500
+        response_text = get_llm_response(
+            prompt=prompt,
+            system_prompt=None,    # o un texto si quieres un rol de system
+            stream=False
         )
-        return response.choices[0].message.content
+        return response_text
     except:
         return f"Perfecto {cliente.nombre}, he analizado tu perfil y te recomiendo una cobertura {recomendacion.tipo_cobertura}. ¿Te gustaría que te prepare algunas cotizaciones?"
 
@@ -367,52 +399,13 @@ Máximo 6 líneas, tono persuasivo pero no agresivo.
 """
     
     try:
-        response = get_llm_response(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=500
+        response_text = get_llm_response(
+            prompt=prompt,
+            system_prompt=None,    # o un texto si quieres un rol de system
+            stream=False
         )
-        return response.choices[0].message.content
-    except:
-        return f"Tienes {len(state.cotizaciones)} opciones excelentes, {state.cliente.nombre}. ¿Qué te gustaría saber sobre ellas?"
 
-def _manejar_presentacion_y_dudas(state: EstadoBot) -> str:
-    """Maneja la presentación de cotizaciones y responde dudas"""
-    
-    if not state.cotizaciones:
-        return "Permíteme generar las cotizaciones para ti..."
-    
-    # Usar IA para manejar la conversación de presentación
-    cotizaciones_texto = "\n".join([
-        f"- {cot.tipo_plan}: €{cot.prima_mensual}/mes, Cobertura: €{cot.cobertura_fallecimiento:,.0f}"
-        for cot in state.cotizaciones
-    ])
-    
-    prompt = f"""
-    Eres iAgente_Vida presentando cotizaciones.
-    
-    Cliente: {state.cliente.nombre}
-    Cotizaciones disponibles:
-    {cotizaciones_texto}
-    
-    Último mensaje del cliente: "{state.mensaje_usuario}"
-    
-    Responde profesionalmente:
-    - Si pregunta por detalles, explica las diferencias
-    - Si tiene dudas, resuelve con confianza
-    - Si muestra interés, guía hacia el siguiente paso
-    - Si pone objeciones, maneja con empatía
-    
-    Máximo 6 líneas.
-    """
-    
-    try:
-        response = get_llm_response(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=500
-        )
-        return response.choices[0].message.content
+        return response_text
     except:
         return f"Tienes {len(state.cotizaciones)} opciones excelentes, {state.cliente.nombre}. ¿Qué te gustaría saber sobre ellas?"
 

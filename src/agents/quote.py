@@ -1,28 +1,55 @@
-from typing import List
-from src.models import Cliente, Cotizacion, RecomendacionProducto
+from typing import List, Dict
+from models import Cliente, Cotizacion, RecomendacionProducto
 from groq import Groq
-from src.config import settings
+from config import settings
 from agents.instructions_loader import cargar_instrucciones_cached
 from agents.llm_client import get_llm_response
 
-# Cliente Groq
-groq_client = Groq(api_key=settings.groq_api_key)
+# Cliente configurado según settings
+def _get_llm_client():
+    """Obtiene el cliente LLM según la configuración"""
+    if settings.llm_provider == "openai":
+        from openai import OpenAI
+        return OpenAI(api_key=settings.openai_api_key)
+    elif settings.llm_provider == "groq":
+        return Groq(api_key=settings.groq_api_key)
+    else:
+        from openai import OpenAI
+        return OpenAI(api_key=settings.openai_api_key)  # fallback
 
-def calcular_cotizaciones(cliente: Cliente, recomendacion: RecomendacionProducto) -> List[Cotizacion]:
+llm_client = _get_llm_client()
+
+def calcular_cotizaciones(cliente: Cliente, recomendacion: RecomendacionProducto, ajustar_precio: bool = False, presupuesto_objetivo: float = None) -> List[Cotizacion]:
     """
     Genera cotizaciones basadas en:
     1. Perfil del cliente (edad, ingresos, dependientes)
     2. Recomendación de producto del needs-based selling
+    3. ajustar_precio: si True, genera opciones más económicas
     """
     
-    print(f"💰 COTIZADOR: Calculando para {cliente.nombre}")
-    print(f"   Perfil: {cliente.edad} años, {cliente.num_dependientes} dependientes, €{cliente.ingresos_mensuales}/mes")
-    print(f"   Recomendación: {recomendacion.tipo_cobertura} - {recomendacion.cobertura_principal}")
+    print(f"💰 QUOTE: {cliente.nombre} | {cliente.edad}a, {cliente.num_dependientes}dep, €{cliente.ingresos_mensuales}/mes")
+    
+    if ajustar_precio and presupuesto_objetivo:
+        print(f"   🎯 Ajustando a €{presupuesto_objetivo}/mes")
+    
+    # Validar que tenemos recomendación
+    if not recomendacion:
+        print("⚠️ No hay recomendación, generando cotizaciones básicas")
+        return _generar_cotizaciones_basicas(cliente, ajustar_precio)
     
     cotizaciones = []
     
     # Usar la recomendación como base para las cotizaciones
     cobertura_base = recomendacion.monto_recomendado
+    
+    # Si necesitamos ajustar precios, reducir cobertura base
+    if ajustar_precio:
+        if presupuesto_objetivo:
+            # Calcular cobertura que se ajuste al presupuesto objetivo
+            cobertura_maxima_posible = _calcular_cobertura_por_presupuesto(cliente.edad, presupuesto_objetivo)
+            cobertura_base = min(cobertura_base, cobertura_maxima_posible)
+        else:
+            cobertura_base = cobertura_base * 0.7  # Reducir 30%
     
     # 1. Plan según la recomendación (principal)
     cotizacion_recomendada = _generar_cotizacion_recomendada(cliente, recomendacion, cobertura_base)
@@ -106,6 +133,35 @@ def _generar_cotizacion_premium(cliente: Cliente, cobertura_base: float) -> Coti
         aseguradora="VidaSegura"
     )
 
+def _calcular_cobertura_por_presupuesto(edad: int, presupuesto_mensual: float) -> float:
+    """Calcula la cobertura máxima posible dado un presupuesto mensual"""
+    
+    # Obtener la tasa anual por edad
+    if edad < 25:
+        tasa_anual = 0.0005
+    elif edad < 30:
+        tasa_anual = 0.0008
+    elif edad < 35:
+        tasa_anual = 0.0012
+    elif edad < 40:
+        tasa_anual = 0.0018
+    elif edad < 45:
+        tasa_anual = 0.0025
+    elif edad < 50:
+        tasa_anual = 0.0035
+    elif edad < 55:
+        tasa_anual = 0.0050
+    else:
+        tasa_anual = 0.0075
+    
+    # Prima anual disponible
+    prima_anual_disponible = presupuesto_mensual * 12
+    
+    # Calcular cobertura máxima: cobertura = prima_anual / tasa
+    cobertura_maxima = prima_anual_disponible / tasa_anual
+    
+    return cobertura_maxima
+
 def _calcular_prima_base(edad: int, cobertura: float) -> float:
     """Calcula la prima mensual base según tablas actuariales simplificadas"""
     
@@ -161,7 +217,6 @@ def _filtrar_por_presupuesto(cotizaciones: List[Cotizacion], cliente: Cliente) -
     else:
         presupuesto_max = cliente.ingresos_mensuales * 0.08  # 8% de ingresos máximo
     
-    print(f"   Presupuesto máximo estimado: €{presupuesto_max:.2f}/mes")
     
     # Filtrar cotizaciones
     cotizaciones_viables = [
@@ -177,6 +232,57 @@ def _filtrar_por_presupuesto(cotizaciones: List[Cotizacion], cliente: Cliente) -
     
     return cotizaciones_viables if cotizaciones_viables else cotizaciones
 
+def _generar_cotizaciones_basicas(cliente: Cliente, ajustar_precio: bool = False) -> List[Cotizacion]:
+    """Genera cotizaciones básicas cuando no hay recomendación"""
+    
+    # Calcular cobertura base según ingresos
+    ingresos_base = cliente.ingresos_mensuales or 2000.0
+    cobertura_base = ingresos_base * 12 * 6  # 6 años de ingresos
+    
+    # Si ajustamos precio, reducir cobertura
+    if ajustar_precio:
+        cobertura_base = cobertura_base * 0.6  # Reducir 40%
+    
+    cotizaciones = []
+    
+    # Plan básico
+    prima_basica = _calcular_prima_base(cliente.edad, cobertura_base)
+    if ajustar_precio:
+        prima_basica = prima_basica * 0.8  # Reducir prima 20%
+    
+    cotizaciones.append(Cotizacion(
+        prima_mensual=round(prima_basica, 2),
+        cobertura_fallecimiento=cobertura_base,
+        tipo_plan="Plan Básico" + (" (Ajustado)" if ajustar_precio else ""),
+        vigencia_anos=20,
+        aseguradora="VidaSegura"
+    ))
+    
+    # Plan estándar (más cobertura) - solo si no estamos ajustando precio
+    if not ajustar_precio:
+        cobertura_estandar = cobertura_base * 1.5
+        prima_estandar = _calcular_prima_base(cliente.edad, cobertura_estandar)
+        cotizaciones.append(Cotizacion(
+            prima_mensual=round(prima_estandar, 2),
+            cobertura_fallecimiento=cobertura_estandar,
+            tipo_plan="Plan Estándar",
+            vigencia_anos=25,
+            aseguradora="VidaSegura"
+        ))
+    else:
+        # Plan económico ultra-básico
+        cobertura_minima = cobertura_base * 0.5
+        prima_minima = _calcular_prima_base(cliente.edad, cobertura_minima) * 0.6
+        cotizaciones.append(Cotizacion(
+            prima_mensual=round(prima_minima, 2),
+            cobertura_fallecimiento=cobertura_minima,
+            tipo_plan="Plan Económico (Mínimo)",
+            vigencia_anos=15,
+            aseguradora="VidaSegura"
+        ))
+    
+    return cotizaciones
+
 def _ajustar_cotizacion_a_presupuesto(cotizacion: Cotizacion, presupuesto: float) -> Cotizacion:
     """Ajusta una cotización para que entre en el presupuesto"""
     
@@ -189,62 +295,6 @@ def _ajustar_cotizacion_a_presupuesto(cotizacion: Cotizacion, presupuesto: float
         vigencia_anos=cotizacion.vigencia_anos,
         aseguradora=cotizacion.aseguradora
     )
-
-
-    """Genera una presentación atractiva de las cotizaciones usando IA"""
-    
-    print(f"📋 Generando presentación para {len(cotizaciones)} cotizaciones")
-    
-    # Preparar información de las cotizaciones
-    cotizaciones_info = ""
-    for i, cot in enumerate(cotizaciones, 1):
-        cotizaciones_info += f"""
-        Opción {i}: {cot.tipo_plan}
-        • Prima mensual: €{cot.prima_mensual}
-        • Cobertura: €{cot.cobertura_fallecimiento:,.0f}
-        • Vigencia: {cot.vigencia_anos} años
-        """
-    
-    # Identificar la recomendada (la que tiene "Recomendado" en el nombre)
-    recomendada = next((i+1 for i, cot in enumerate(cotizaciones) if "Recomendado" in cot.tipo_plan), 1)
-    
-    prompt = f"""
-    Eres iAgente_Vida, especialista en seguros de vida. Presenta estas cotizaciones de manera profesional y persuasiva.
-    
-    Cliente: {cliente.nombre}, {cliente.edad} años, {cliente.num_dependientes} dependientes
-    Ingresos: €{cliente.ingresos_mensuales}/mes
-    Presupuesto indicado: €{cliente.nivel_ahorro or 'No especificado'}/mes
-    
-    Cotizaciones calculadas:{cotizaciones_info}
-    
-    INSTRUCCIONES:
-    1. Saluda y agradece su paciencia
-    2. Menciona que has analizado su perfil cuidadosamente
-    3. Presenta cada opción destacando sus beneficios únicos
-    4. Recomienda específicamente la Opción {recomendada} y explica por qué
-    5. Pregunta cuál le interesa más o si tiene dudas
-    
-    Sé profesional, confiado y orientado a la acción.
-    Usa un tono cálido pero experto.
-    Máximo 8 líneas.
-    """
-    
-    try:
-        response = get_llm_response(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=500
-        )
-        
-        presentacion = response.choices[0].message.content
-        print(f"✅ Presentación generada exitosamente")
-        return presentacion
-        
-    except Exception as e:
-        print(f"⚠️ Error generando presentación: {e}")
-        
-        # Fallback manual
-        return _generar_presentacion_fallback(cliente, cotizaciones)
 
 def _generar_presentacion_fallback(cliente: Cliente, cotizaciones: List[Cotizacion]) -> str:
     """Presentación manual en caso de que falle la IA"""
@@ -284,14 +334,21 @@ def generar_presentacion(cliente: Cliente, cotizaciones: List[Cotizacion]) -> st
     # Cargar instrucciones desde archivo
     instrucciones_quote = cargar_instrucciones_cached('quote')
     
-    # Preparar información de las cotizaciones
+    # Preparar información detallada de las cotizaciones con lógica de cálculo
     cotizaciones_info = ""
     for i, cot in enumerate(cotizaciones, 1):
+        # Calcular información adicional para explicar el cálculo
+        cobertura_años = cot.cobertura_fallecimiento / (cliente.ingresos_mensuales * 12) if cliente.ingresos_mensuales else 0
+        tasa_anual = (cot.prima_mensual * 12) / cot.cobertura_fallecimiento * 1000 if cot.cobertura_fallecimiento else 0
+        
         cotizaciones_info += f"""
         Opción {i}: {cot.tipo_plan}
         • Prima mensual: €{cot.prima_mensual}
         • Cobertura: €{cot.cobertura_fallecimiento:,.0f}
         • Vigencia: {cot.vigencia_anos} años
+        • Equivale a: {cobertura_años:.1f} años de ingresos
+        • Tasa: {tasa_anual:.2f}‰ anual
+        • Aseguradora: {cot.aseguradora}
         """
     
     # Identificar la recomendada (la que tiene "Recomendado" en el nombre)
@@ -300,37 +357,51 @@ def generar_presentacion(cliente: Cliente, cotizaciones: List[Cotizacion]) -> st
     prompt = f"""
 {instrucciones_quote}
 
-=== CONTEXTO DE PRESENTACIÓN ===
+=== CONTEXTO CRÍTICO ===
+🎯 RECUERDA: Estás hablando con un AGENTE DE SEGUROS, NO con el cliente final.
+🎯 Tu trabajo es ASESORAR AL AGENTE sobre cómo presentar estas cotizaciones.
+🎯 NUNCA te dirijas directamente al cliente. Siempre habla AL AGENTE.
+
+=== DATOS DEL CLIENTE DEL AGENTE ===
 CLIENTE: {cliente.nombre}, {cliente.edad} años, {cliente.num_dependientes} dependientes
 INGRESOS: €{cliente.ingresos_mensuales}/mes
 PRESUPUESTO INDICADO: €{cliente.nivel_ahorro or 'No especificado'}/mes
 
-COTIZACIONES CALCULADAS:{cotizaciones_info}
+=== COTIZACIONES CALCULADAS ===
+{cotizaciones_info}
 
 === TU TAREA ===
-Presenta estas cotizaciones siguiendo las instrucciones de Quote Agent:
+Asesora al agente sobre cómo presentar estas cotizaciones:
 
-1. Saluda y agradece su paciencia
-2. Menciona que has analizado su perfil cuidadosamente
-3. Presenta cada opción destacando sus beneficios únicos
-4. Recomienda específicamente la Opción {recomendada} y explica por qué
-5. Pregunta cuál le interesa más o si tiene dudas
+1. Proporciona las cotizaciones de forma clara y organizada
+2. Sugiere al agente cómo destacar los beneficios de cada opción
+3. Recomienda específicamente la Opción {recomendada} y explica por qué
+4. Dale argumentos que puede usar con el cliente
+5. Sugiere cómo debe preguntar al cliente
 
-Sé profesional, confiado y orientado a la acción.
-Usa un tono experto pero cálido.
-Máximo 8 líneas.
+EJEMPLOS DE RESPUESTAS CORRECTAS:
+❌ MAL: "Perfecto Juan, he calculado estas opciones para ti..."
+✅ BIEN: "Te sugiero presentar a Juan estas opciones. Explícale que..."
+
+❌ MAL: "¿Cuál te interesa más?"
+✅ BIEN: "Pregúntale cuál opción le parece más interesante y por qué..."
+
+IMPORTANTE:
+- Habla SIEMPRE al agente, nunca al cliente
+- Usa "te sugiero", "deberías explicarle", "dile que"
+- Proporciona argumentos de venta específicos
+- Máximo 8 líneas por respuesta
 """
     
     try:
-        response = get_llm_response(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=500
+        response_text = get_llm_response(
+            prompt=prompt,
+            system_prompt=None,    # o un texto si quieres un rol de system
+            stream=False
         )
         
-        presentacion = response.choices[0].message.content
         print(f"✅ Presentación generada exitosamente")
-        return presentacion
+        return response_text
         
     except Exception as e:
         print(f"⚠️ Error generando presentación: {e}")
@@ -350,3 +421,10 @@ def validar_cotizacion(cotizacion: Cotizacion, cliente: Cliente) -> Dict[str, bo
     }
     
     return validaciones
+
+# Función bridge para LangGraph
+def quote_agent_node(state):
+    """Función node para compatibilidad con LangGraph"""
+    from quote_agent import QuoteAgent
+    agent = QuoteAgent()
+    return agent.invoke(state)

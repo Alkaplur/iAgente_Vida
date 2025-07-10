@@ -32,31 +32,59 @@ class LLMClient:
             )
     
     async def get_completion(self, prompt: str, system_prompt: Optional[str] = None, stream: bool = False) -> str:
-        """Obtiene una respuesta del LLM usando la API más reciente de OpenAI"""
+        """Obtiene una respuesta del LLM usando las APIs correctas"""
         try:
             if self.provider == "openai":
-                # Construir el input
-                input_text = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-                
-                if stream:
-                    stream_response = self.client.responses.create(
+                # Determinar si usar Chat Completions o Completions
+                if self.model.startswith("gpt-"):
+                    # Para modelos GPT usar Chat Completions API
+                    messages = []
+                    if system_prompt:
+                        messages.append({"role": "system", "content": system_prompt})
+                    messages.append({"role": "user", "content": prompt})
+                    
+                    response = self.client.chat.completions.create(
                         model=self.model,
-                        input=input_text,
-                        stream=True
+                        messages=messages,
+                        stream=stream
                     )
-                    collected_chunks = []
-                    for chunk in stream_response:
-                        chunk_content = chunk.content
-                        if chunk_content:
-                            collected_chunks.append(chunk_content)
-                            print(chunk_content, end="", flush=True)
-                    return "".join(collected_chunks)
+                    
+                    if stream:
+                        # Para streaming
+                        collected_chunks = []
+                        for chunk in response:
+                            if chunk.choices[0].delta.content is not None:
+                                content = chunk.choices[0].delta.content
+                                collected_chunks.append(content)
+                                print(content, end="", flush=True)
+                        return "".join(collected_chunks)
+                    else:
+                        # Para respuesta normal
+                        return response.choices[0].message.content
                 else:
-                    response = self.client.responses.create(
+                    # Para otros modelos usar Completions API
+                    prompt_text = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+                    
+                    response = self.client.completions.create(
                         model=self.model,
-                        input=input_text
+                        prompt=prompt_text,
+                        stream=stream,
+                        max_tokens=1024,
+                        temperature=0.7
                     )
-                    return response.content
+                    
+                    if stream:
+                        # Para streaming
+                        collected_chunks = []
+                        for chunk in response:
+                            if chunk.choices[0].text is not None:
+                                content = chunk.choices[0].text
+                                collected_chunks.append(content)
+                                print(content, end="", flush=True)
+                        return "".join(collected_chunks)
+                    else:
+                        # Para respuesta normal
+                        return response.choices[0].text
 
             elif self.provider == "groq":
                 messages = []
@@ -71,11 +99,20 @@ class LLMClient:
                 return response.choices[0].message.content
 
             elif self.provider == "anthropic":
-                message = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-                response = self.client.messages.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": message}]
-                )
+                if system_prompt:
+                    # Para Anthropic, el system prompt va separado
+                    response = self.client.messages.create(
+                        model=self.model,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=1024
+                    )
+                else:
+                    response = self.client.messages.create(
+                        model=self.model,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=1024
+                    )
                 return response.content[0].text
 
         except Exception as e:
