@@ -81,7 +81,7 @@ with st.sidebar:
     else:
         ejemplo = {
             "nombre": "",
-            "edad": 25,
+            "edad": 18,  # Mínimo edad
             "estado_civil": "",
             "profesion": "",
             "ingresos": 0,
@@ -367,14 +367,16 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
                 grafo = crear_grafo()
                 resultado = grafo.invoke(st.session_state.estado_bot)
                 
-                # Debug: Mostrar qué devuelve el sistema
-                with st.expander("🔍 Sistema Debug", expanded=False):
-                    st.write("**Tipo resultado:**", str(type(resultado))[:100])
-                    if hasattr(resultado, 'mensajes'):
-                        st.write("**Mensajes count:**", len(resultado.mensajes))
-                        if resultado.mensajes:
-                            st.write("**Último mensaje:**", resultado.mensajes[-1])
-                    st.write("**Estructura completa:**", str(resultado)[:300])
+                # Debug: Mostrar qué devuelve el sistema - GUARDAR EN SESSION STATE
+                debug_info = {
+                    "tipo_resultado": str(type(resultado)),
+                    "tiene_mensajes": hasattr(resultado, 'mensajes'),
+                    "count_mensajes": len(resultado.mensajes) if hasattr(resultado, 'mensajes') else 0,
+                    "ultimo_mensaje": resultado.mensajes[-1] if hasattr(resultado, 'mensajes') and resultado.mensajes else None,
+                    "estructura": str(resultado)[:500],
+                    "timestamp": datetime.now().strftime("%H:%M:%S")
+                }
+                st.session_state.debug_multiagente = debug_info
                 
                 # Verificar que el resultado tiene la estructura correcta
                 if hasattr(resultado, 'mensajes') and hasattr(resultado, 'cliente'):
@@ -439,6 +441,17 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
 
 # Panel de estado del sistema (parte inferior)
 st.divider()
+
+# Debug persistente del sistema multiagente
+if "debug_multiagente" in st.session_state:
+    debug = st.session_state.debug_multiagente
+    with st.expander(f"🔍 Último Debug Sistema Multiagente ({debug['timestamp']})", expanded=False):
+        st.write("**Tipo resultado:**", debug["tipo_resultado"])
+        st.write("**Tiene mensajes:**", debug["tiene_mensajes"])
+        st.write("**Count mensajes:**", debug["count_mensajes"])
+        if debug["ultimo_mensaje"]:
+            st.write("**Último mensaje:**", debug["ultimo_mensaje"])
+        st.code(debug["estructura"], language="text")
 
 col1, col2, col3 = st.columns(3)
 
