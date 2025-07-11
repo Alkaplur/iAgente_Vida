@@ -33,7 +33,7 @@ except ImportError as e:
 if __name__ == '__main__':
     # Configuración de producción
     host = os.getenv('HOST', '0.0.0.0')
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.getenv('PORT', 8080))  # Railway usa PORT variable
     debug = os.getenv('DEBUG', 'false').lower() == 'true'
     
     logger.info(f"Iniciando iAgente_Vida WhatsApp Webhook")
