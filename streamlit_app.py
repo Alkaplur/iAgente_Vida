@@ -387,16 +387,23 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
                         ultimo_mensaje = resultado.mensajes[-1]
                         if ultimo_mensaje.get('role') == 'assistant':
                             agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta del sistema multiagente.'))
-                elif isinstance(resultado, dict) and 'mensajes' in resultado:
-                    # Si el resultado es un diccionario, extraer la respuesta y mantener estructura
-                    if resultado['mensajes']:
+                elif isinstance(resultado, dict):
+                    # NUEVO: Manejar diccionario con respuesta_bot
+                    if 'respuesta_bot' in resultado:
+                        # El sistema devolvió respuesta_bot directamente
+                        agregar_mensaje("assistant", resultado['respuesta_bot'])
+                        # Actualizar el estado con los datos del diccionario si los hay
+                        if 'etapa' in resultado:
+                            st.session_state.estado_bot.etapa = resultado['etapa']
+                    elif 'mensajes' in resultado and resultado['mensajes']:
+                        # Si hay mensajes en el diccionario
                         ultimo_mensaje = resultado['mensajes'][-1]
                         if ultimo_mensaje.get('role') == 'assistant':
                             agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta procesada.'))
-                        else:
-                            # Respuesta contextual basada en el input del usuario
-                            respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
-                            agregar_mensaje("assistant", respuesta_contextual)
+                    else:
+                        # Respuesta contextual basada en el input del usuario
+                        respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
+                        agregar_mensaje("assistant", respuesta_contextual)
                 else:
                     # Respuesta contextual en lugar de genérica
                     respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
