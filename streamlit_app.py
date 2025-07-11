@@ -63,17 +63,12 @@ st.markdown("""
 # Header principal con logo
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    # Tu logo personalizado - reemplaza esta URL con la de tu logo
-    try:
-        st.image("https://i.imgur.com/placeholder.png", width=150)  # Reemplaza con tu logo
-    except:
-        # Fallback si no se puede cargar el logo
-        st.markdown("🤖💼", unsafe_allow_html=True)
-    
+    # Logo placeholder - reemplaza con tu logo cuando lo tengas
     st.markdown("""
-    <div style="text-align: center;">
-        <h1 style="color: #0066cc;">iAgente_Vida</h1>
-        <p style="color: #666;"><em>Sistema Multiagente para Asesoramiento en Seguros de Vida</em></p>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 4em; margin-bottom: 10px;">🤖💼🛡️</div>
+        <h1 style="color: #0066cc; margin: 0;">iAgente_Vida</h1>
+        <p style="color: #666; margin: 0;"><em>Sistema Multiagente para Asesoramiento en Seguros de Vida</em></p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -252,77 +247,148 @@ with chat_container:
 
 # Input de chat
 if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
+    # Verificar que tenemos un estado válido
+    if not hasattr(st.session_state.estado_bot, 'mensajes'):
+        st.session_state.estado_bot = inicializar_estado()
+    
     # Mostrar mensaje del usuario inmediatamente
     with st.chat_message("user", avatar="👤"):
         st.write(prompt)
     
-    # Actualizar estado con el nuevo mensaje
-    st.session_state.estado_bot.mensaje_usuario = prompt
-    
-    # Añadir mensaje del usuario al historial
-    st.session_state.estado_bot.mensajes.append({
-        "role": "user",
-        "content": prompt,
-        "timestamp": datetime.now().isoformat()
-    })
-    
-    # Procesar con el sistema multiagente
+    # Procesar mensaje
     try:
+        # Actualizar estado con el nuevo mensaje
+        st.session_state.estado_bot.mensaje_usuario = prompt
+        
+        # Añadir mensaje del usuario al historial
+        if hasattr(st.session_state.estado_bot, 'mensajes') and isinstance(st.session_state.estado_bot.mensajes, list):
+            st.session_state.estado_bot.mensajes.append({
+                "role": "user",
+                "content": prompt,
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            # Reinicializar si la estructura no es correcta
+            st.session_state.estado_bot = inicializar_estado()
+            st.session_state.estado_bot.mensaje_usuario = prompt
+            st.session_state.estado_bot.mensajes.append({
+                "role": "user",
+                "content": prompt,
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        # Procesar con el sistema multiagente
         with st.spinner("🤖 iAgente_Vida está procesando..."):
             # Crear el grafo y procesar
             grafo = crear_grafo()
             resultado = grafo.invoke(st.session_state.estado_bot)
-            st.session_state.estado_bot = resultado
-        
-        # Mostrar respuesta del asistente
-        if (st.session_state.estado_bot.mensajes and 
-            st.session_state.estado_bot.mensajes[-1].get("role") == "assistant"):
             
-            ultima_respuesta = st.session_state.estado_bot.mensajes[-1].get("content")
-            with st.chat_message("assistant", avatar="🤖"):
-                st.write(ultima_respuesta)
+            # Verificar que el resultado tiene la estructura correcta
+            if hasattr(resultado, 'mensajes') and hasattr(resultado, 'cliente'):
+                # Solo actualizar si el resultado es un objeto válido de EstadoBot
+                st.session_state.estado_bot = resultado
+            elif isinstance(resultado, dict) and 'mensajes' in resultado:
+                # Si el resultado es un diccionario, extraer la respuesta y mantener estructura
+                if resultado['mensajes']:
+                    ultimo_mensaje = resultado['mensajes'][-1]
+                    if ultimo_mensaje.get('role') == 'assistant':
+                        st.session_state.estado_bot.mensajes.append({
+                            "role": "assistant",
+                            "content": ultimo_mensaje.get('content', 'Respuesta procesada.'),
+                            "timestamp": datetime.now().isoformat()
+                        })
+                    else:
+                        # Respuesta genérica si no hay mensaje de asistente
+                        st.session_state.estado_bot.mensajes.append({
+                            "role": "assistant",
+                            "content": "He analizado tu consulta. ¿En qué más puedo ayudarte?",
+                            "timestamp": datetime.now().isoformat()
+                        })
+            else:
+                # Si el resultado no tiene la estructura correcta, respuesta genérica
+                st.session_state.estado_bot.mensajes.append({
+                    "role": "assistant",
+                    "content": "He procesado tu consulta. ¿Necesitas ayuda con algo específico sobre seguros de vida?",
+                    "timestamp": datetime.now().isoformat()
+                })
+        
+        # Forzar actualización de la interfaz
+        st.rerun()
         
     except Exception as e:
         st.error(f"❌ Error procesando la consulta: {str(e)}")
         
-        # Añadir mensaje de error al historial
-        error_msg = "Disculpa, hubo un problema técnico. ¿Puedes repetir tu consulta?"
-        st.session_state.estado_bot.mensajes.append({
-            "role": "assistant",
-            "content": error_msg,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        with st.chat_message("assistant", avatar="🤖"):
-            st.write(error_msg)
+        # Añadir mensaje de error al historial de forma segura
+        try:
+            error_msg = "Disculpa, hubo un problema técnico. ¿Puedes repetir tu consulta?"
+            if hasattr(st.session_state.estado_bot, 'mensajes'):
+                st.session_state.estado_bot.mensajes.append({
+                    "role": "assistant",
+                    "content": error_msg,
+                    "timestamp": datetime.now().isoformat()
+                })
+            
+            with st.chat_message("assistant", avatar="🤖"):
+                st.write(error_msg)
+        except:
+            # Último recurso: reinicializar completamente
+            st.session_state.estado_bot = inicializar_estado()
+            st.warning("Sistema reiniciado. Por favor, inténtalo de nuevo.")
 
 # Panel de estado del sistema (parte inferior)
 st.divider()
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.markdown("**📊 Estado del Sistema**")
-    estado_actual = st.session_state.estado_bot.etapa.value if st.session_state.estado_bot.etapa else "inicio"
-    st.info(f"**Etapa:** {estado_actual}")
-    st.info(f"**Agente Activo:** {st.session_state.estado_bot.agente_activo}")
-
-with col2:
-    st.markdown("**💬 Estadísticas**")
-    st.metric("Mensajes", len(st.session_state.estado_bot.mensajes))
-    st.metric("Cotizaciones", len(st.session_state.estado_bot.cotizaciones))
-
-with col3:
-    st.markdown("**🎯 Progreso**")
-    if st.session_state.estado_bot.recomendacion_producto:
-        st.success("✅ Recomendación generada")
-    else:
-        st.warning("⏳ Recopilando datos...")
+# Validar estado antes de mostrar información
+try:
+    # Verificar si tenemos un estado válido
+    if not hasattr(st.session_state.estado_bot, 'mensajes'):
+        st.session_state.estado_bot = inicializar_estado()
     
-    if st.session_state.estado_bot.cotizaciones:
-        st.success(f"✅ {len(st.session_state.estado_bot.cotizaciones)} cotizaciones")
-    else:
-        st.info("📋 Sin cotizaciones aún")
+    with col1:
+        st.markdown("**📊 Estado del Sistema**")
+        try:
+            estado_actual = st.session_state.estado_bot.etapa.value if hasattr(st.session_state.estado_bot, 'etapa') and st.session_state.estado_bot.etapa else "inicio"
+            agente_activo = getattr(st.session_state.estado_bot, 'agente_activo', 'orquestador')
+            st.info(f"**Etapa:** {estado_actual}")
+            st.info(f"**Agente Activo:** {agente_activo}")
+        except:
+            st.info("**Etapa:** inicio")
+            st.info("**Agente Activo:** orquestador")
+
+    with col2:
+        st.markdown("**💬 Estadísticas**")
+        try:
+            mensajes_count = len(getattr(st.session_state.estado_bot, 'mensajes', []))
+            cotizaciones_count = len(getattr(st.session_state.estado_bot, 'cotizaciones', []))
+            st.metric("Mensajes", mensajes_count)
+            st.metric("Cotizaciones", cotizaciones_count)
+        except:
+            st.metric("Mensajes", 0)
+            st.metric("Cotizaciones", 0)
+
+    with col3:
+        st.markdown("**🎯 Progreso**")
+        try:
+            recomendacion = getattr(st.session_state.estado_bot, 'recomendacion_producto', None)
+            if recomendacion:
+                st.success("✅ Recomendación generada")
+            else:
+                st.warning("⏳ Recopilando datos...")
+            
+            cotizaciones = getattr(st.session_state.estado_bot, 'cotizaciones', [])
+            if cotizaciones:
+                st.success(f"✅ {len(cotizaciones)} cotizaciones")
+            else:
+                st.info("📋 Sin cotizaciones aún")
+        except:
+            st.warning("⏳ Recopilando datos...")
+            st.info("📋 Sin cotizaciones aún")
+
+except Exception as e:
+    # Si hay cualquier error, reinicializar silenciosamente
+    st.session_state.estado_bot = inicializar_estado()
 
 # Footer con información
 st.divider()
