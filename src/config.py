@@ -9,14 +9,19 @@ if os.path.exists('.env.local'):
 else:
     load_dotenv('.env', override=True)
 
-# Para Streamlit Cloud, también intentar cargar desde st.secrets
+# Para Streamlit Cloud, cargar desde st.secrets
 try:
     import streamlit as st
     if hasattr(st, 'secrets'):
+        # Cargar todas las secrets como variables de entorno
         for key, value in st.secrets.items():
             os.environ[key] = str(value)
-except:
+        print(f"✅ Cargadas {len(st.secrets)} secrets desde Streamlit")
+except ImportError:
+    # Normal cuando no se ejecuta en Streamlit
     pass
+except Exception as e:
+    print(f"⚠️ Error cargando secrets: {e}")
 
 class Settings(BaseSettings):
     # LLM Configuration

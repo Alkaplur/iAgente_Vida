@@ -348,9 +348,18 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
                 # Debug: mostrar configuración antes de crear el grafo
                 with st.expander("🔍 Debug Info", expanded=False):
                     try:
+                        # Cargar secrets de Streamlit primero
+                        if hasattr(st, 'secrets'):
+                            st.write("**Streamlit Secrets disponibles:**", list(st.secrets.keys()))
+                            if 'OPENAI_API_KEY' in st.secrets:
+                                api_key = st.secrets['OPENAI_API_KEY']
+                                st.write("**API Key desde secrets:**", f"✅ {api_key[:8]}...{api_key[-4:]}")
+                        
                         from src.config import settings
                         st.write("**Config:**", f"Provider: {settings.llm_provider}, Model: {settings.llm_model}")
-                        st.write("**API Key:**", f"OpenAI: {'✅' if settings.openai_api_key and settings.openai_api_key != 'tu_openai_api_key_aqui' else '❌'}")
+                        st.write("**API Key desde settings:**", f"OpenAI: {'✅' if settings.openai_api_key and settings.openai_api_key != 'tu_openai_api_key_aqui' else '❌'}")
+                        if settings.openai_api_key:
+                            st.write("**API Key actual:**", f"{settings.openai_api_key[:8]}...{settings.openai_api_key[-4:]}")
                     except Exception as config_error:
                         st.write("**Error config:**", str(config_error)[:100])
                 
