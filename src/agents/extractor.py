@@ -1,7 +1,12 @@
 from pydantic_ai import Agent
-from models import Cliente, ContextoConversacional
-from config import settings
-from agents.instructions_loader import cargar_instrucciones_cached
+try:
+    from ..models import Cliente, ContextoConversacional
+    from ..config import settings
+    from .instructions_loader import cargar_instrucciones_cached
+except ImportError:
+    from models import Cliente, ContextoConversacional
+    from config import settings
+    from agents.instructions_loader import cargar_instrucciones_cached
 import asyncio
 import re
 
@@ -15,26 +20,9 @@ def _get_model_string():
     else:
         return f"openai:gpt-4o-mini"  # fallback
 
-# Cargar instrucciones desde archivo
 def _get_extractor_instructions():
-    """Obtiene las instrucciones del extractor desde archivo"""
-    try:
-        # Cargar instrucciones desde archivo txt
-        import os
-        instructions_path = os.path.join(
-            os.path.dirname(__file__), 
-            'agents_instructions', 
-            'extractor_instructions.txt'
-        )
-        with open(instructions_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        print(f"⚠️ Error cargando instrucciones del extractor: {e}")
-        return """
-        Eres un extractor de datos de clientes para seguros de vida.
-        Extrae información precisa manteniendo los datos existentes intactos.
-        Solo actualiza campos con información nueva y explícita.
-        """
+    """Obtiene las instrucciones del extractor usando el loader estándar"""
+    return cargar_instrucciones_cached('extractor')
 
 extractor_agent = Agent(
     _get_model_string(),

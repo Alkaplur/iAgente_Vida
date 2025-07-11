@@ -1,13 +1,26 @@
 from typing import Dict, Any, Tuple
-from models import EstadoBot, EstadoConversacion, Cliente, RecomendacionProducto
-from agents.instructions_loader import cargar_instrucciones_cached
-from agents.extractor import extractor_agent
+try:
+    from ..models import EstadoBot, EstadoConversacion, Cliente, RecomendacionProducto
+    from .instructions_loader import cargar_instrucciones_cached
+    from .extractor import extractor_agent
+    from ..config import settings
+    from .llm_client import get_llm_response
+    from ..models import Cliente, ContextoConversacional
+    from .extractor import extraer_datos_cliente
+    from ..utils.productos_loader import obtener_productos_loader
+    from ..utils.motor_cotizacion import obtener_motor_cotizacion
+except ImportError:
+    from models import EstadoBot, EstadoConversacion, Cliente, RecomendacionProducto
+    from agents.instructions_loader import cargar_instrucciones_cached
+    from agents.extractor import extractor_agent
+    from config import settings
+    from agents.llm_client import get_llm_response
+    from models import Cliente, ContextoConversacional
+    from agents.extractor import extraer_datos_cliente
+    from utils.productos_loader import obtener_productos_loader
+    from utils.motor_cotizacion import obtener_motor_cotizacion
 from groq import Groq
-from config import settings
 import asyncio
-from agents.llm_client import get_llm_response
-from models import Cliente, ContextoConversacional
-from agents.extractor import extraer_datos_cliente
 
 # Cliente LLM configurado según settings
 def _get_llm_client():
@@ -213,7 +226,7 @@ def _extraer_datos_inteligente(cliente: Cliente, mensaje: str, contexto: Context
     
     try:
         # Importar el extractor especializado
-        from agents.extractor import extraer_datos_cliente
+        from .extractor import extraer_datos_cliente
         
         # Usar la función correcta del extractor
         cliente_actualizado, hubo_cambios = extraer_datos_cliente(cliente, mensaje, contexto)
@@ -362,39 +375,58 @@ def _respuesta_fallback_natural(state: EstadoBot) -> str:
 
 def _generar_recomendacion_producto(cliente: Cliente) -> RecomendacionProducto:
     """
-    Genera recomendación de producto usando needs-based selling
+    Genera recomendación de producto usando el motor de cotización y productos loader
     """
     
-    # Calcular monto base (usar ingresos o estimación)
-    ingresos_base = cliente.ingresos_mensuales or 2000.0  # Estimación por defecto
+    # Obtener instancias de los nuevos módulos
+    productos_loader = obtener_productos_loader()
+    motor_cotizacion = obtener_motor_cotizacion()
     
-    # Lógica de recomendación basada en perfil
-    if cliente.num_dependientes and cliente.num_dependientes > 0 and cliente.edad and cliente.edad < 45:
-        # Familia joven - protección completa
-        return RecomendacionProducto(
-            tipo_cobertura="completa",
-            cobertura_principal="fallecimiento+invalidez",
-            monto_recomendado=ingresos_base * 12 * 6,  # Reducido de 10 a 6
-            justificacion=f"Con {cliente.num_dependientes} dependientes, necesitas protección integral para asegurar su futuro",
-            urgencia="alta",
-            productos_adicionales=["invalidez", "enfermedades_graves"]
-        )
-    elif cliente.edad and cliente.edad > 45:
-        # Edad madura - ahorro + protección
-        return RecomendacionProducto(
-            tipo_cobertura="premium",
-            cobertura_principal="vida+ahorro",
-            monto_recomendado=ingresos_base * 12 * 5,  # Reducido de 8 a 5
-            justificacion="A tu edad, combinar protección con ahorro es la estrategia más inteligente",
-            urgencia="media",
-            productos_adicionales=["ahorro", "pensiones"]
-        )
+    # Calcular monto base usando el motor de cotización
+    ingresos_base = cliente.ingresos_mensuales or 2000.0
+    anos_recomendados, tipo_cobertura_recomendada = motor_cotizacion.recomendar_cobertura(cliente)
+    monto_recomendado = ingresos_base * 12 * anos_recomendados
+    
+    # Obtener producto recomendado
+    producto_recomendado = productos_loader.recomendar_producto(
+        edad=cliente.edad or 30,
+        num_dependientes=cliente.num_dependientes or 0,
+        ingresos_mensuales=cliente.ingresos_mensuales,
+        profesion=cliente.profesion
+    )
+    
+    # Generar justificación basada en el producto recomendado
+    if producto_recomendado:
+        justificacion = f"{producto_recomendado.argumentos_venta}. {producto_recomendado.caracteristicas}"
     else:
-        # Joven sin dependientes - protección básica
-        return RecomendacionProducto(
-            tipo_cobertura="básica",
-            cobertura_principal="fallecimiento",
-            monto_recomendado=ingresos_base * 12 * 4,  # Reducido de 6 a 4
-            justificacion="Protección básica para comenzar a asegurar tu futuro",
-            urgencia="media"
-        )
+        justificacion = "Protección personalizada según tu perfil y necesidades"
+    
+    # Determinar urgencia según perfil
+    if cliente.num_dependientes and cliente.num_dependientes > 0:
+        urgencia = "alta"
+    elif cliente.edad and cliente.edad > 50:
+        urgencia = "media"
+    else:
+        urgencia = "media"
+    
+    # Determinar tipo de cobertura
+    if tipo_cobertura_recomendada == "fallecimiento+invalidez":
+        tipo_cobertura = "completa"
+    elif tipo_cobertura_recomendada == "vida+ahorro":
+        tipo_cobertura = "premium"
+    else:
+        tipo_cobertura = "básica"
+    
+    # Obtener productos adicionales del producto recomendado
+    productos_adicionales = []
+    if producto_recomendado and producto_recomendado.coberturas_adicionales:
+        productos_adicionales = producto_recomendado.coberturas_adicionales
+    
+    return RecomendacionProducto(
+        tipo_cobertura=tipo_cobertura,
+        cobertura_principal=tipo_cobertura_recomendada,
+        monto_recomendado=monto_recomendado,
+        justificacion=justificacion,
+        urgencia=urgencia,
+        productos_adicionales=productos_adicionales if productos_adicionales else None
+    )

@@ -1,5 +1,0 @@
-graph:
-  entrypoint: src/graph.py
-  function: graph
-  env:
-    PYTHONPATH: /Users/davidnogueras/Desktop/Cursor/iAgente_Vida/src

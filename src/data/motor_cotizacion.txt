@@ -1,0 +1,153 @@
+# MOTOR DE COTIZACIÓN - SEGUROS DE VIDA
+# Archivo de configuración para cálculos actuariales de seguros de vida
+
+# === TASAS ACTUARIALES BASE (POR EDAD) ===
+# Formato: EDAD_MIN|EDAD_MAX|TASA_ANUAL|DESCRIPCION
+
+TASAS_EDAD
+18|24|0.0008|Jóvenes - Riesgo muy bajo
+25|29|0.0012|Jóvenes adultos - Riesgo bajo  
+30|34|0.0018|Adultos jóvenes - Riesgo bajo-medio
+35|39|0.0025|Adultos - Riesgo medio
+40|44|0.0035|Adultos maduros - Riesgo medio-alto
+45|49|0.0050|Maduros - Riesgo alto
+50|54|0.0075|Maduros avanzados - Riesgo alto
+55|59|0.0100|Pre-senior - Riesgo muy alto
+60|64|0.0140|Senior - Riesgo máximo
+65|99|0.0200|Senior avanzado - Riesgo extremo
+
+# === MULTIPLICADORES POR TIPO DE VIDA ===
+# Formato: TIPO_PRODUCTO|MULTIPLICADOR|DESCRIPCION
+
+MULTIPLICADORES_COBERTURA
+vida_termino|1.0|Vida término - Base más económica
+vida_completa|2.5|Vida completa - Prima alta por valor efectivo
+vida_ahorro|3.0|Vida con ahorro - Prima más alta por inversión
+fallecimiento|1.0|Solo fallecimiento - Base
+fallecimiento+valor_efectivo|2.5|Fallecimiento + ahorro
+fallecimiento+inversion|3.0|Fallecimiento + inversión
+fallecimiento+ahorro_garantizado|2.8|Fallecimiento + ahorro garantizado
+
+# === AJUSTES POR PROFESIÓN ===
+# Formato: PROFESION|MULTIPLICADOR|DESCRIPCION
+
+AJUSTES_PROFESION
+ingeniero|0.95|Profesión de bajo riesgo - 5% descuento
+medico|0.95|Profesión de bajo riesgo - 5% descuento  
+profesor|0.95|Profesión de bajo riesgo - 5% descuento
+contador|0.95|Profesión de bajo riesgo - 5% descuento
+abogado|0.95|Profesión de bajo riesgo - 5% descuento
+dentista|0.95|Profesión de bajo riesgo - 5% descuento
+arquitecto|0.98|Profesión de bajo riesgo - 2% descuento
+oficinista|0.98|Profesión de bajo riesgo - 2% descuento
+vendedor|1.00|Profesión estándar - Sin ajuste
+comerciante|1.00|Profesión estándar - Sin ajuste
+policia|1.15|Profesión de alto riesgo - 15% recargo
+bombero|1.20|Profesión de alto riesgo - 20% recargo
+militar|1.15|Profesión de alto riesgo - 15% recargo
+piloto|1.10|Profesión de riesgo medio - 10% recargo
+conductor|1.05|Profesión de riesgo medio - 5% recargo
+constructor|1.10|Profesión de riesgo medio - 10% recargo
+minero|1.25|Profesión de muy alto riesgo - 25% recargo
+petrolero|1.20|Profesión de muy alto riesgo - 20% recargo
+
+# === RECOMENDACIONES DE COBERTURA POR PERFIL ===
+# Formato: PERFIL|AÑOS_INGRESOS|TIPO_PRODUCTO|DESCRIPCION
+
+RECOMENDACIONES_COBERTURA
+joven_sin_dependientes|4|vida_termino|Protección temporal básica
+joven_con_dependientes|8|vida_termino|Protección temporal alta para familia
+adulto_sin_dependientes|6|vida_completa|Protección permanente + ahorro
+adulto_con_dependientes|10|vida_completa|Protección permanente alta para familia
+adulto_maduro_sin_dependientes|5|vida_ahorro|Protección + inversión para jubilación
+adulto_maduro_con_dependientes|8|vida_ahorro|Protección + patrimonio familiar
+senior|3|vida_completa|Protección final + herencia
+empresario|12|vida_ahorro|Protección empresarial + familiar
+ejecutivo|10|vida_ahorro|Protección patrimonial alta
+
+# === LÍMITES DE COBERTURA POR TIPO ===
+# Formato: TIPO_PRODUCTO|COBERTURA_MIN|COBERTURA_MAX|PRIMA_MIN|PRIMA_MAX_INGRESOS
+
+LIMITES_COBERTURA
+vida_termino|25000|1000000|20|0.08|Límites para vida término
+vida_completa|50000|2000000|80|0.15|Límites para vida completa  
+vida_ahorro|75000|3000000|120|0.20|Límites para vida con ahorro
+
+# === DESCUENTOS ESPECIALES ===
+# Formato: CONDICION|DESCUENTO|DESCRIPCION
+
+DESCUENTOS_ESPECIALES
+no_fumador|0.15|15% descuento para no fumadores
+deportista_regular|0.08|8% descuento para deportistas regulares
+examen_medico_excelente|0.10|10% descuento por examen médico excelente
+familia_numerosa|0.05|5% descuento para 3+ dependientes
+cliente_preferente|0.12|12% descuento para clientes VIP
+poliza_familiar|0.08|8% descuento por múltiples asegurados
+pago_anual|0.06|6% descuento por pago anual anticipado
+
+# === RECARGOS POR RIESGO ===
+# Formato: FACTOR_RIESGO|RECARGO|DESCRIPCION
+
+RECARGOS_RIESGO
+fumador|0.30|30% recargo para fumadores
+sobrepeso_moderado|0.15|15% recargo para sobrepeso moderado
+sobrepeso_severo|0.25|25% recargo para sobrepeso severo
+hipertension|0.20|20% recargo para hipertensión controlada
+diabetes_tipo2|0.35|35% recargo para diabetes tipo 2
+diabetes_tipo1|0.50|50% recargo para diabetes tipo 1
+historial_cardiaco|0.40|40% recargo por historial cardíaco
+cancer_remision|0.60|60% recargo por cáncer en remisión
+deporte_extremo|0.25|25% recargo para deportes extremos
+piloto_privado|0.20|20% recargo para pilotos privados
+
+# === VIGENCIAS RECOMENDADAS ===
+# Formato: TIPO_PRODUCTO|VIGENCIA_MIN|VIGENCIA_MAX|VIGENCIA_RECOMENDADA
+
+VIGENCIAS_PRODUCTO
+vida_termino|10|30|20|Vigencias típicas vida término
+vida_completa|0|99|99|Vigencias típicas vida completa (toda la vida)
+vida_ahorro|0|99|99|Vigencias típicas vida ahorro (toda la vida)
+
+# === FÓRMULAS DE CÁLCULO ===
+# Documentación de las fórmulas principales
+
+FORMULAS
+# Prima Base Vida Término = Cobertura * Tasa_Edad
+# Prima Base Vida Completa = Cobertura * Tasa_Edad * 2.5  
+# Prima Base Vida Ahorro = Cobertura * Tasa_Edad * 3.0
+# Prima Ajustada = Prima_Base * Ajuste_Profesion
+# Prima Final = Prima_Ajustada * (1 + Recargos) * (1 - Descuentos)
+# Cobertura Recomendada = Ingresos_Mensuales * 12 * Años_Ingresos_Recomendados
+
+# === PARÁMETROS CONFIGURABLES ===
+# Valores que se pueden ajustar fácilmente
+
+PARAMETROS
+aseguradora_principal|VidaSegura|Nombre de la aseguradora principal
+margen_comercial|0.12|12% margen comercial sobre prima técnica
+gastos_administracion|0.08|8% gastos de administración
+reserva_tecnica|0.05|5% reserva técnica obligatoria
+inflacion_anual|0.03|3% inflación anual estimada
+rendimiento_garantizado|0.035|3.5% rendimiento garantizado vida ahorro
+rendimiento_minimo|0.025|2.5% rendimiento mínimo vida completa
+comision_agente|0.08|8% comisión del agente de seguros
+
+# === PRODUCTOS RECOMENDADOS POR PERFIL ESPECÍFICO ===
+# Formato: PERFIL|PRODUCTO_RECOMENDADO|ALTERNATIVA|JUSTIFICACION
+
+PRODUCTOS_POR_PERFIL
+joven_soltero|Vida Término Básico|Vida Término Plus|Protección temporal económica
+joven_pareja|Vida Término Familiar|Vida Término Plus|Protección familiar temporal
+familia_joven|Vida Término Familiar|Vida Completa Familiar|Máxima protección para dependientes
+profesional_establecido|Vida Completa Tradicional|Vida Universal|Protección permanente + ahorro
+ejecutivo_alto_patrimonio|Vida Completa Ejecutiva|Vida Indexada|Optimización fiscal + crecimiento
+emprendedor|Vida Empresarial|Vida Universal|Protección personal + empresarial
+planificacion_jubilacion|Vida Jubilación|Vida Universal Garantizada|Ingresos futuros garantizados
+padres_educacion_hijos|Vida Universitaria|Vida Dotal|Financiamiento educación garantizado
+
+# === NOTAS DE USO ===
+# - Las tasas son anuales y se dividen entre 12 para prima mensual
+# - Los multiplicadores se aplican según el tipo de producto
+# - Los ajustes profesionales son acumulativos con descuentos/recargos
+# - Las recomendaciones varían según edad, dependientes e ingresos
+# - Mantener consistencia en el formato para parsing correcto

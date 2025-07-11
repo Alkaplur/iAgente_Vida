@@ -1,175 +1,179 @@
-# iAgente_Vida
+# iAgente_Vida - Sistema Multi-Agente para Seguros de Vida
 
-🤖 **Sistema Multi-Agente Inteligente para Seguros de Vida**
+## 🎯 **Sistema Especializado en Seguros de Vida**
 
-Sistema conversacional basado en LangGraph que asiste a agentes de seguros en el proceso de venta consultiva de seguros de vida.
+Sistema multi-agente desarrollado con LangGraph que asiste a agentes de seguros en la venta consultiva de seguros de vida. Integra datos modulares, cálculos actuariales y técnicas de venta profesionales.
 
-## 🚀 Características
-
-- **Multi-Agente**: 4 agentes especializados trabajando en coordinación
-- **Needs-Based Selling**: Metodología consultiva de venta
-- **Extracción Inteligente**: Captura automática de datos del cliente
-- **Cotización Automática**: Generación de cotizaciones personalizadas
-- **Soporte Multi-LLM**: OpenAI, Groq, Anthropic
-- **Conversión de Monedas**: USD → EUR automática
-- **Detección de Ingresos Anuales**: Convierte automáticamente a mensuales
-
-## 🏗️ Arquitectura
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   ORQUESTADOR   │───▶│ NEEDS-BASED     │───▶│     QUOTE       │
-│   (Coordina)    │    │ SELLING         │    │ (Cotizaciones)  │
-└─────────────────┘    │ (Necesidades)   │    └─────────────────┘
-                       └─────────────────┘              │
-                                ▲                       ▼
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │   EXTRACTOR     │    │  PRESENTADOR    │
-                       │   (Datos)       │    │  (Cierre)       │
-                       └─────────────────┘    └─────────────────┘
-```
-
-## 📁 Estructura del Proyecto
+## 🏗️ **Arquitectura**
 
 ```
 iAgente_Vida/
-├── start.py                     # 🚀 Punto de entrada
-├── src/
-│   ├── main.py                  # 💬 Función principal de conversación
-│   ├── graph.py                 # 🕸️ Grafo LangGraph principal
-│   ├── models.py                # 📋 Modelos Pydantic
-│   ├── config.py                # ⚙️ Configuración del sistema
-│   └── agents/
-│       ├── orquestador.py       # 🧠 Agente coordinador
-│       ├── extractor.py         # 🔍 Extracción de datos
-│       ├── needs_based_selling.py # 🎯 Análisis de necesidades
-│       ├── quote.py             # 💰 Generación de cotizaciones
-│       ├── instructions_loader.py # 📚 Carga de instrucciones
-│       ├── llm_client.py        # 🤖 Cliente LLM universal
-│       └── agents_instructions/ # 📝 Instrucciones de cada agente
-└── archivos_no_utilizados/      # 📦 Archivos de desarrollo (no usados)
+├── src/                    # Código fuente
+│   ├── agents/            # Agentes especializados
+│   │   ├── orquestador.py    # Coordina el flujo
+│   │   ├── needs_based_selling.py # Análisis consultivo
+│   │   ├── quote.py          # Cotizaciones actuariales
+│   │   ├── presentador.py    # Manejo de objeciones y cierre
+│   │   ├── extractor.py      # Extracción de datos del cliente
+│   │   ├── llm_client.py     # Cliente universal LLM
+│   │   └── instructions_loader.py # Carga instrucciones
+│   ├── utils/             # Utilidades modulares
+│   │   ├── motor_cotizacion.py   # Cálculos actuariales
+│   │   └── productos_loader.py   # Catálogo de productos
+│   ├── data/              # Datos externos (editables sin programar)
+│   │   ├── productos_seguros.txt # 18 productos de vida especializados
+│   │   └── motor_cotizacion.txt  # Fórmulas actuariales configurables
+│   ├── models.py          # Estructuras de datos (Pydantic)
+│   ├── config.py          # Configuración del sistema
+│   ├── graph.py           # Orquestador LangGraph
+│   └── main.py            # Función principal
+├── docs/                  # Documentación y diagramas
+├── start.py               # Punto de entrada
+├── langgraph.json         # Configuración LangGraph Studio
+├── requirements.txt       # Dependencias mínimas
+└── .env                   # Variables de entorno
 ```
 
-## 🛠️ Instalación
+## 🚀 **Instalación y Uso**
 
-1. **Clonar el repositorio**
+### **1. Instalación**
 ```bash
-git clone <repo-url>
+git clone <repo>
 cd iAgente_Vida
-```
-
-2. **Crear entorno virtual**
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# o
-.venv\Scripts\activate     # Windows
-```
-
-3. **Instalar dependencias**
-```bash
 pip install -r requirements.txt
 ```
 
-4. **Configurar variables de entorno**
-```bash
-cp .env.example .env
-# Editar .env con tus API keys
-```
-
-## ⚙️ Configuración
-
-Crear archivo `.env` con:
-
+### **2. Configuración**
+Edita el archivo `.env`:
 ```env
-# LLM Provider (openai, groq, anthropic)
-LLM_PROVIDER=openai
-
-# API Keys
-OPENAI_API_KEY=tu-api-key-aquí
-GROQ_API_KEY=tu-api-key-aquí
-ANTHROPIC_API_KEY=tu-api-key-aquí
-
-# Modelos
-OPENAI_MODEL=gpt-4
-GROQ_MODEL=llama-3.1-70b-versatile
+LLM_PROVIDER=openai  # o groq, anthropic
+OPENAI_API_KEY=tu_api_key_aqui
+LANGCHAIN_API_KEY=tu_langchain_key  # Para tracing
 ```
 
-## 🚀 Uso
+### **3. Modos de Ejecución**
 
+#### **Chat Interactivo**
 ```bash
 python start.py
 ```
 
-El sistema iniciará una conversación interactiva donde podrás:
-1. Proporcionar datos del cliente
-2. Recibir análisis de necesidades
-3. Obtener cotizaciones personalizadas
-4. Gestionar objeciones y ajustes
+#### **LangGraph Studio (Visualización Web)**
+```bash
+langgraph dev
+```
+Luego abrir: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
 
-## 💡 Ejemplos de Uso
+## 🧠 **Agentes Especializados**
+
+### **1. 🎯 Orquestador**
+- Analiza la intención del usuario
+- Deriva al agente apropiado
+- Mantiene el flujo de conversación
+
+### **2. 📋 Needs-Based Selling**
+- Análisis consultivo del cliente
+- Recopila datos (edad, dependientes, ingresos)
+- Recomienda productos específicos
+- Usa técnicas de venta consultiva
+
+### **3. 💰 Quote (Cotizador)**
+- Cálculos actuariales precisos
+- Múltiples opciones de precio
+- Ajustes por profesión y riesgo
+- Integración con motor de cotización
+
+### **4. 📊 Presentador**
+- Presenta cotizaciones atractivamente
+- Maneja objeciones del cliente
+- Técnicas de cierre profesionales
+- Scripts de venta específicos
+
+### **5. 🔍 Extractor**
+- Captura datos del cliente inteligentemente
+- Usa regex + LLM para extracción híbrida
+- Convierte formatos y monedas
+- Validación de datos extraídos
+
+## 📊 **Sistema Modular Único**
+
+### **Catálogo de Productos Editable**
+- **18 productos** especializados en seguros de vida
+- **3 categorías**: Vida Término, Vida Completa, Vida con Ahorro
+- **Editable**: Sin necesidad de programar
+- **Archivo**: `src/data/productos_seguros.txt`
+
+### **Motor de Cotización Configurable**
+- **Fórmulas actuariales** reales
+- **Tasas por edad** y profesión
+- **Multiplicadores** configurables
+- **Archivo**: `src/data/motor_cotizacion.txt`
+
+## 🎯 **Características Técnicas**
+
+### **Multi-LLM Support**
+- ✅ OpenAI (GPT-4, GPT-4o-mini)
+- ✅ Groq (Llama 3, Mixtral)
+- ✅ Anthropic (Claude)
+
+### **Arquitectura Profesional**
+- ✅ LangGraph para orquestación
+- ✅ Pydantic para validación de datos
+- ✅ Imports duales (Studio + directo)
+- ✅ Configuración por archivos
+
+### **Observabilidad**
+- ✅ LangChain Tracing integrado
+- ✅ Visualización web del grafo
+- ✅ Debugging en tiempo real
+
+## 📈 **Flujo de Trabajo Típico**
 
 ```
-👤 Tú: Mi cliente se llama Juan, tiene 35 años, 2 hijos
-🤖 iAgente: Para Juan, te sugiero preguntar sobre sus ingresos...
+1. Usuario: "Cliente de 35 años con 2 hijos"
+   → ORQUESTADOR → NEEDS_BASED_SELLING
 
-👤 Tú: Gana 3000 USD al mes, hipoteca de 1200 USD
-🤖 iAgente: Perfecto. Con 3 dependientes, te recomiendo...
+2. "¿Cuáles son sus ingresos mensuales?"
+   → "3000 euros" → NEEDS_BASED_SELLING
 
-👤 Tú: Genera cotización
-💰 QUOTE: Generando 3 opciones personalizadas...
+3. "Te recomiendo Vida Completa Plus"
+   → "Dame cotizaciones" → QUOTE
+
+4. "Opción 1: 45€/mes - 150,000€ cobertura"
+   → "Muy caro" → PRESENTADOR
+
+5. "Explícale que por 45€ protege 150,000€..."
 ```
 
-## 🔧 Características Técnicas
+## 🔧 **Configuración Avanzada**
 
-- **Extracción Inteligente**: Detecta nombres, edades, ingresos (USD/EUR), dependientes
-- **Conversión Automática**: 2000 EUR/año → 166 EUR/mes
-- **Detección de Objeciones**: "muy caro" → ajuste automático de precios
-- **Flujo Bidireccional**: Quote ↔ Presentador para ajustes
-- **Fallback Robusto**: Funciona sin API keys (patrones regex)
+### **LangChain Tracing**
+```env
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=tu_key
+LANGCHAIN_PROJECT=iAgente_Vida
+```
 
-## 📊 Agentes Especializados
+### **Personalización de Productos**
+Edita `src/data/productos_seguros.txt`:
+```
+VIDA_TERMINO|Nuevo Producto|fallecimiento|Características|Adicionales|Público|Argumentos
+```
 
-### 🧠 Orquestador
-- Analiza intención del usuario
-- Coordina flujo entre agentes
-- Detecta objeciones de precio
+### **Ajuste de Fórmulas**
+Edita `src/data/motor_cotizacion.txt`:
+```
+TASAS_EDAD
+30|35|0.0015|Adultos - Riesgo moderado
+```
 
-### 🔍 Extractor
-- Captura datos del cliente (regex + LLM)
-- Convierte monedas y periodos
-- Preserva datos existentes
+## 📝 **Desarrollado por:**
+- **Arquitectura**: LangGraph multi-agente
+- **Validación**: Pydantic
+- **LLMs**: OpenAI, Groq, Anthropic
+- **Especialización**: Seguros de vida únicamente
+- **Modularidad**: Datos externos editables
 
-### 🎯 Needs-Based Selling
-- Metodología consultiva
-- Recomienda productos según perfil
-- Genera argumentos de venta
+---
 
-### 💰 Quote
-- Calcula cotizaciones personalizadas
-- Ajusta precios según presupuesto
-- Soporte para múltiples opciones
-
-### 📊 Presentador
-- Presenta cotizaciones efectivamente
-- Maneja objeciones
-- Técnicas de cierre
-
-## 🏆 Ventajas del Sistema
-
-✅ **Conversacional**: Interacción natural con el agente de seguros
-✅ **Inteligente**: Aprende del contexto de la conversación  
-✅ **Flexible**: Soporte múltiples LLMs y configuraciones
-✅ **Robusto**: Funciona offline con patrones regex
-✅ **Escalable**: Arquitectura modular fácil de extender
-
-## 🧹 Limpieza del Proyecto
-
-Los archivos no utilizados han sido movidos a `archivos_no_utilizados/` para mantener el proyecto limpio:
-
-- **Agentes alternativos** (supervisor_agent.py, research_agent.py, etc.)
-- **Configuraciones no usadas** (config_manager.py, llm_config.py)
-- **Tests de desarrollo** (múltiples archivos de prueba)
-- **Documentación antigua** (archivos .md históricos)
-
-Ver `archivos_no_utilizados/README.md` para más detalles.
+**Para más detalles, consulta la documentación completa en `/docs/`**

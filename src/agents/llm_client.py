@@ -2,7 +2,10 @@
 Cliente universal para LLMs - soporta OpenAI, Groq, Anthropic, etc.
 """
 from typing import List, Dict, Optional
-from config import settings
+try:
+    from ..config import settings
+except ImportError:
+    from config import settings
 import os
 from openai import OpenAI
 from groq import Groq

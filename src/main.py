@@ -1,6 +1,11 @@
-from graph import graph
-from models import EstadoBot, Cliente, EstadoConversacion
-from agents.instructions_loader import _cache_instrucciones
+try:
+    from .graph import graph
+    from .models import EstadoBot, Cliente, EstadoConversacion
+    from .agents.instructions_loader import _cache_instrucciones
+except ImportError:
+    from graph import graph
+    from models import EstadoBot, Cliente, EstadoConversacion
+    from agents.instructions_loader import _cache_instrucciones
 
 # Limpio cache de instrucciones al iniciar
 _cache_instrucciones.clear()

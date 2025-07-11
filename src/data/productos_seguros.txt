@@ -1,0 +1,58 @@
+# DICCIONARIO DE PRODUCTOS DE SEGUROS DE VIDA
+# Formato: TIPO_PRODUCTO|NOMBRE_COMERCIAL|COBERTURA_PRINCIPAL|CARACTERISTICAS|COBERTURAS_ADICIONALES|PUBLICO_OBJETIVO|ARGUMENTOS_VENTA
+
+# === SEGUROS DE VIDA TÉRMINO ===
+
+VIDA_TERMINO|Vida Término Básico|fallecimiento|Seguro temporal por 10-30 años, prima nivelada durante el período|ninguna|Familias jóvenes, necesidades temporales|Protección temporal a precio accesible. Ideal para cubrir hipoteca o mientras los hijos son dependientes.
+
+VIDA_TERMINO|Vida Término Renovable|fallecimiento|Seguro temporal renovable sin examen médico|accidentes_personales|Personas 25-55 años, ingresos variables|Flexibilidad total. Renueva automáticamente sin revisión médica. Perfecto para ingresos variables.
+
+VIDA_TERMINO|Vida Término Familiar|fallecimiento|Cobertura temporal para toda la familia en una póliza|fallecimiento_conyuge,accidentes_hijos|Familias con hijos menores|Una sola póliza protege a toda la familia. Ahorro significativo vs. pólizas individuales.
+
+VIDA_TERMINO|Vida Término Plus|fallecimiento|Término convertible a seguro permanente|conversion_garantizada,prima_nivel|Jóvenes profesionales, planificación a futuro|Comienza temporal, convierte a permanente cuando mejoren tus ingresos. Sin nueva evaluación médica.
+
+VIDA_TERMINO|Hipoteca Protegida|fallecimiento|Cobertura que disminuye con el saldo de la hipoteca|invalidez_total|Propietarios de vivienda|Tu familia nunca perderá la casa. La cobertura se ajusta al saldo pendiente de la hipoteca.
+
+# === SEGUROS DE VIDA COMPLETA ===
+
+VIDA_COMPLETA|Vida Completa Tradicional|fallecimiento+valor_efectivo|Seguro permanente con acumulación de valor en efectivo|prestamos_poliza,dividendos|Planificación patrimonial, ahorro conservador|Protección permanente + ahorro garantizado. Nunca expira, construye patrimonio familiar.
+
+VIDA_COMPLETA|Vida Completa Premium|fallecimiento+valor_efectivo|Vida completa con dividendos participativos|dividendos_anuales,prestamos_preferenciales|Altos ingresos, planificación fiscal|Protección + inversión + beneficios fiscales. Los dividendos pueden reducir las primas futuras.
+
+VIDA_COMPLETA|Vida Completa Familiar|fallecimiento+valor_efectivo|Póliza que cubre múltiples miembros de la familia|cobertura_hijos,beneficios_educacion|Familias establecidas, patrimonio familiar|Protege y construye patrimonio para toda la familia. Los hijos quedan asegurados de por vida.
+
+VIDA_COMPLETA|Vida Completa Ejecutiva|fallecimiento+valor_efectivo|Diseñada para altos patrimonios con beneficios fiscales|split_dollar,key_person|Ejecutivos, empresarios|Optimización fiscal avanzada. Protege patrimonio personal y empresarial simultáneamente.
+
+VIDA_COMPLETA|Vida Completa Pago Limitado|fallecimiento+valor_efectivo|Primas por período limitado, cobertura de por vida|primas_10_20_anos,valor_garantizado|Ingresos altos temporales, profesionales|Paga solo 10-20 años, protección de por vida. Ideal para deportistas o profesionales con picos de ingresos.
+
+# === SEGUROS DE VIDA CON AHORRO ===
+
+VIDA_AHORRO|Vida Universal|fallecimiento+inversion|Seguro flexible con componente de inversión|flexibilidad_primas,opciones_inversion|Ingresos variables, inversionistas activos|Máxima flexibilidad. Ajusta primas y cobertura según tus necesidades cambiantes.
+
+VIDA_AHORRO|Vida Universal Garantizada|fallecimiento+ahorro_garantizado|Vida universal con rendimientos mínimos garantizados|rendimiento_minimo_3porciento,proteccion_inflacion|Perfil conservador, aversión al riesgo|Combina protección con ahorro seguro. Rendimiento mínimo garantizado del 3% anual.
+
+VIDA_AHORRO|Vida Ahorro Plus|fallecimiento+fondos_inversion|Seguro con múltiples opciones de fondos de inversión|10_fondos_diferentes,rebalanceo_automatico|Inversionistas experimentados, patrimonio medio-alto|Protección + portfolio de inversión profesional. 10 fondos diferentes para diversificar.
+
+VIDA_AHORRO|Vida Universitaria|fallecimiento+ahorro_educacion|Específico para financiar educación universitaria|beneficio_educacion,becas_academicas|Padres con hijos pequeños|Garantiza la educación universitaria de tus hijos. Beneficios adicionales por rendimiento académico.
+
+VIDA_AHORRO|Vida Jubilación|fallecimiento+pension_complementaria|Seguro que se convierte en renta vitalicia|renta_vitalicia,opciones_beneficiario|Planificación jubilación, +40 años|Protección hoy, pensión mañana. Garantiza ingresos de por vida en la jubilación.
+
+VIDA_AHORRO|Vida Empresarial|fallecimiento+beneficios_empresa|Para empresarios, combina protección personal y empresarial|buy_sell_agreement,financiamiento_empresa|Empresarios, socios de empresas|Protege familia y empresa. Facilita transferencia de participaciones societarias.
+
+VIDA_AHORRO|Vida Dotal|fallecimiento+maduracion|Paga al final del período o por fallecimiento|capital_garantizado,supervivencia|Ahorro disciplinado, metas específicas|Ahorro forzoso con protección. Si sobrevives, recibes el capital completo.
+
+VIDA_AHORRO|Vida Indexada|fallecimiento+rendimiento_indices|Rendimientos vinculados a índices bursátiles|proteccion_perdidas,participacion_ganancias|Inversionistas moderados, búsqueda rentabilidad|Participa en ganancias del mercado sin riesgo de pérdidas. Lo mejor de ambos mundos.
+
+# === NOTAS DE USO ===
+# - VIDA_TERMINO: Protección temporal, primas bajas, sin valor de rescate
+# - VIDA_COMPLETA: Protección permanente, construye valor en efectivo, primas niveladas
+# - VIDA_AHORRO: Protección + inversión, flexibilidad, potencial de crecimiento
+# 
+# Cada línea representa un producto específico de seguros de vida
+# TIPO_PRODUCTO: VIDA_TERMINO, VIDA_COMPLETA, VIDA_AHORRO
+# NOMBRE_COMERCIAL: Nombre comercial del producto
+# COBERTURA_PRINCIPAL: Tipo de cobertura principal
+# CARACTERISTICAS: Características distintivas del producto
+# COBERTURAS_ADICIONALES: Beneficios adicionales separados por comas
+# PUBLICO_OBJETIVO: A quién va dirigido específicamente
+# ARGUMENTOS_VENTA: Argumentos comerciales para la venta

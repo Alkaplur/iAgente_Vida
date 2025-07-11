@@ -1,9 +1,19 @@
 from typing import List, Dict
-from models import Cliente, Cotizacion, RecomendacionProducto
+try:
+    from ..models import Cliente, Cotizacion, RecomendacionProducto
+    from ..config import settings
+    from .instructions_loader import cargar_instrucciones_cached
+    from .llm_client import get_llm_response
+    from ..utils.motor_cotizacion import obtener_motor_cotizacion
+    from ..utils.productos_loader import obtener_productos_loader
+except ImportError:
+    from models import Cliente, Cotizacion, RecomendacionProducto
+    from config import settings
+    from agents.instructions_loader import cargar_instrucciones_cached
+    from agents.llm_client import get_llm_response
+    from utils.motor_cotizacion import obtener_motor_cotizacion
+    from utils.productos_loader import obtener_productos_loader
 from groq import Groq
-from config import settings
-from agents.instructions_loader import cargar_instrucciones_cached
-from agents.llm_client import get_llm_response
 
 # Cliente configurado según settings
 def _get_llm_client():
@@ -21,10 +31,7 @@ llm_client = _get_llm_client()
 
 def calcular_cotizaciones(cliente: Cliente, recomendacion: RecomendacionProducto, ajustar_precio: bool = False, presupuesto_objetivo: float = None) -> List[Cotizacion]:
     """
-    Genera cotizaciones basadas en:
-    1. Perfil del cliente (edad, ingresos, dependientes)
-    2. Recomendación de producto del needs-based selling
-    3. ajustar_precio: si True, genera opciones más económicas
+    Genera cotizaciones usando el motor de cotización modular
     """
     
     print(f"💰 QUOTE: {cliente.nombre} | {cliente.edad}a, {cliente.num_dependientes}dep, €{cliente.ingresos_mensuales}/mes")
@@ -32,164 +39,81 @@ def calcular_cotizaciones(cliente: Cliente, recomendacion: RecomendacionProducto
     if ajustar_precio and presupuesto_objetivo:
         print(f"   🎯 Ajustando a €{presupuesto_objetivo}/mes")
     
-    # Validar que tenemos recomendación
-    if not recomendacion:
-        print("⚠️ No hay recomendación, generando cotizaciones básicas")
-        return _generar_cotizaciones_basicas(cliente, ajustar_precio)
+    # Obtener motor de cotización
+    motor_cotizacion = obtener_motor_cotizacion()
     
-    cotizaciones = []
+    # Generar cotizaciones usando el motor
+    cotizaciones = motor_cotizacion.generar_cotizaciones_multiples(
+        cliente=cliente,
+        ajustar_precio=ajustar_precio,
+        presupuesto_objetivo=presupuesto_objetivo
+    )
     
-    # Usar la recomendación como base para las cotizaciones
-    cobertura_base = recomendacion.monto_recomendado
-    
-    # Si necesitamos ajustar precios, reducir cobertura base
-    if ajustar_precio:
-        if presupuesto_objetivo:
-            # Calcular cobertura que se ajuste al presupuesto objetivo
-            cobertura_maxima_posible = _calcular_cobertura_por_presupuesto(cliente.edad, presupuesto_objetivo)
-            cobertura_base = min(cobertura_base, cobertura_maxima_posible)
-        else:
-            cobertura_base = cobertura_base * 0.7  # Reducir 30%
-    
-    # 1. Plan según la recomendación (principal)
-    cotizacion_recomendada = _generar_cotizacion_recomendada(cliente, recomendacion, cobertura_base)
-    cotizaciones.append(cotizacion_recomendada)
-    
-    # 2. Plan alternativo más económico
-    if recomendacion.tipo_cobertura != "básica":
-        cotizacion_economica = _generar_cotizacion_economica(cliente, cobertura_base)
-        cotizaciones.append(cotizacion_economica)
-    
-    # 3. Plan premium (si el cliente puede permitírselo)
-    if _puede_permitirse_premium(cliente, recomendacion):
-        cotizacion_premium = _generar_cotizacion_premium(cliente, cobertura_base)
-        cotizaciones.append(cotizacion_premium)
-    
-    # Filtrar por presupuesto del cliente
-    cotizaciones_filtradas = _filtrar_por_presupuesto(cotizaciones, cliente)
-    
-    print(f"✅ {len(cotizaciones_filtradas)} cotizaciones generadas")
-    return cotizaciones_filtradas
+    print(f"✅ {len(cotizaciones)} cotizaciones generadas con motor")
+    return cotizaciones
 
 def _generar_cotizacion_recomendada(cliente: Cliente, recomendacion: RecomendacionProducto, cobertura_base: float) -> Cotizacion:
-    """Genera la cotización principal basada en la recomendación"""
+    """Genera la cotización principal usando el motor de cotización"""
     
-    # Prima base según edad y cobertura
-    prima_base = _calcular_prima_base(cliente.edad, cobertura_base)
+    motor_cotizacion = obtener_motor_cotizacion()
     
-    # Ajustes según el tipo de cobertura recomendada
-    if recomendacion.cobertura_principal == "fallecimiento+invalidez":
-        prima_final = prima_base * 1.4  # 40% más por invalidez
-        tipo_plan = "Protección Completa - Fallecimiento + Invalidez"
-        vigencia = 25
-    elif recomendacion.cobertura_principal == "vida+ahorro":
-        prima_final = prima_base * 1.8  # 80% más por componente de ahorro
-        tipo_plan = "Vida + Ahorro - Protección e Inversión"
-        vigencia = 30
-    else:  # fallecimiento básico
-        prima_final = prima_base
-        tipo_plan = "Protección Básica - Solo Fallecimiento"
-        vigencia = 20
-    
-    # Ajuste por profesión (algunos trabajos tienen descuentos)
-    if cliente.profesion and any(prof in cliente.profesion.lower() for prof in ["ingeniero", "médico", "profesor", "contador"]):
-        prima_final *= 0.95  # 5% descuento profesiones de bajo riesgo
-    
-    return Cotizacion(
-        prima_mensual=round(prima_final, 2),
-        cobertura_fallecimiento=cobertura_base,
-        tipo_plan=f"{tipo_plan} (Recomendado)",
-        vigencia_anos=vigencia,
-        aseguradora="VidaSegura"
+    # Usar el motor para generar la cotización
+    cotizacion = motor_cotizacion.calcular_cotizacion_completa(
+        cliente=cliente,
+        tipo_cobertura=recomendacion.cobertura_principal,
+        cobertura_deseada=cobertura_base
     )
+    
+    # Marcar como recomendada
+    cotizacion.tipo_plan += " (Recomendado)"
+    
+    return cotizacion
 
 def _generar_cotizacion_economica(cliente: Cliente, cobertura_base: float) -> Cotizacion:
-    """Genera opción más económica"""
+    """Genera opción más económica usando el motor"""
     
-    # Reducir cobertura pero mantener protección esencial
-    cobertura_economica = cobertura_base * 0.6
-    prima_economica = _calcular_prima_base(cliente.edad, cobertura_economica) * 0.8
+    motor_cotizacion = obtener_motor_cotizacion()
     
-    return Cotizacion(
-        prima_mensual=round(prima_economica, 2),
-        cobertura_fallecimiento=cobertura_economica,
-        tipo_plan="Opción Económica - Protección Esencial",
-        vigencia_anos=15,
-        aseguradora="VidaSegura"
+    # Generar cotización básica con cobertura reducida
+    cotizacion = motor_cotizacion.calcular_cotizacion_completa(
+        cliente=cliente,
+        tipo_cobertura="fallecimiento",
+        cobertura_deseada=cobertura_base * 0.6
     )
+    
+    cotizacion.tipo_plan = "Opción Económica - Protección Esencial"
+    cotizacion.vigencia_anos = 15
+    
+    return cotizacion
 
 def _generar_cotizacion_premium(cliente: Cliente, cobertura_base: float) -> Cotizacion:
-    """Genera opción premium con máxima cobertura"""
+    """Genera opción premium usando el motor"""
     
-    # Aumentar cobertura y añadir beneficios extra
-    cobertura_premium = cobertura_base * 1.5
-    prima_premium = _calcular_prima_base(cliente.edad, cobertura_premium) * 2.2
+    motor_cotizacion = obtener_motor_cotizacion()
     
-    return Cotizacion(
-        prima_mensual=round(prima_premium, 2),
-        cobertura_fallecimiento=cobertura_premium,
-        tipo_plan="Premium - Cobertura Total + Enfermedades Graves + Ahorro",
-        vigencia_anos=35,
-        aseguradora="VidaSegura"
+    # Generar cotización premium con cobertura ampliada
+    cotizacion = motor_cotizacion.calcular_cotizacion_completa(
+        cliente=cliente,
+        tipo_cobertura="vida+ahorro",
+        cobertura_deseada=cobertura_base * 1.5
     )
+    
+    cotizacion.tipo_plan = "Premium - Cobertura Total + Enfermedades Graves + Ahorro"
+    cotizacion.vigencia_anos = 35
+    
+    return cotizacion
 
 def _calcular_cobertura_por_presupuesto(edad: int, presupuesto_mensual: float) -> float:
-    """Calcula la cobertura máxima posible dado un presupuesto mensual"""
+    """Calcula la cobertura máxima posible dado un presupuesto mensual usando el motor"""
     
-    # Obtener la tasa anual por edad
-    if edad < 25:
-        tasa_anual = 0.0005
-    elif edad < 30:
-        tasa_anual = 0.0008
-    elif edad < 35:
-        tasa_anual = 0.0012
-    elif edad < 40:
-        tasa_anual = 0.0018
-    elif edad < 45:
-        tasa_anual = 0.0025
-    elif edad < 50:
-        tasa_anual = 0.0035
-    elif edad < 55:
-        tasa_anual = 0.0050
-    else:
-        tasa_anual = 0.0075
-    
-    # Prima anual disponible
-    prima_anual_disponible = presupuesto_mensual * 12
-    
-    # Calcular cobertura máxima: cobertura = prima_anual / tasa
-    cobertura_maxima = prima_anual_disponible / tasa_anual
-    
-    return cobertura_maxima
+    motor_cotizacion = obtener_motor_cotizacion()
+    return motor_cotizacion._calcular_cobertura_por_presupuesto(edad, presupuesto_mensual)
 
 def _calcular_prima_base(edad: int, cobertura: float) -> float:
-    """Calcula la prima mensual base según tablas actuariales simplificadas"""
+    """Calcula la prima mensual base usando el motor de cotización"""
     
-    # Tasas por edad (por cada €1000 de cobertura)
-    if edad < 25:
-        tasa_anual = 0.0005
-    elif edad < 30:
-        tasa_anual = 0.0008
-    elif edad < 35:
-        tasa_anual = 0.0012
-    elif edad < 40:
-        tasa_anual = 0.0018
-    elif edad < 45:
-        tasa_anual = 0.0025
-    elif edad < 50:
-        tasa_anual = 0.0035
-    elif edad < 55:
-        tasa_anual = 0.0050
-    else:
-        tasa_anual = 0.0075
-    
-    # Prima anual = cobertura × tasa
-    prima_anual = cobertura * tasa_anual
-    
-    # Convertir a mensual
-    prima_mensual = prima_anual / 12
-    
-    return prima_mensual
+    motor_cotizacion = obtener_motor_cotizacion()
+    return motor_cotizacion.calcular_prima_base(edad, cobertura)
 
 def _puede_permitirse_premium(cliente: Cliente, recomendacion: RecomendacionProducto) -> bool:
     """Evalúa si el cliente puede permitirse la opción premium"""
@@ -233,53 +157,29 @@ def _filtrar_por_presupuesto(cotizaciones: List[Cotizacion], cliente: Cliente) -
     return cotizaciones_viables if cotizaciones_viables else cotizaciones
 
 def _generar_cotizaciones_basicas(cliente: Cliente, ajustar_precio: bool = False) -> List[Cotizacion]:
-    """Genera cotizaciones básicas cuando no hay recomendación"""
+    """Genera cotizaciones básicas usando el motor cuando no hay recomendación"""
     
-    # Calcular cobertura base según ingresos
-    ingresos_base = cliente.ingresos_mensuales or 2000.0
-    cobertura_base = ingresos_base * 12 * 6  # 6 años de ingresos
+    motor_cotizacion = obtener_motor_cotizacion()
     
-    # Si ajustamos precio, reducir cobertura
-    if ajustar_precio:
-        cobertura_base = cobertura_base * 0.6  # Reducir 40%
+    # Generar cotizaciones básicas con el motor
+    cotizaciones = motor_cotizacion.generar_cotizaciones_multiples(
+        cliente=cliente,
+        ajustar_precio=ajustar_precio
+    )
     
-    cotizaciones = []
-    
-    # Plan básico
-    prima_basica = _calcular_prima_base(cliente.edad, cobertura_base)
-    if ajustar_precio:
-        prima_basica = prima_basica * 0.8  # Reducir prima 20%
-    
-    cotizaciones.append(Cotizacion(
-        prima_mensual=round(prima_basica, 2),
-        cobertura_fallecimiento=cobertura_base,
-        tipo_plan="Plan Básico" + (" (Ajustado)" if ajustar_precio else ""),
-        vigencia_anos=20,
-        aseguradora="VidaSegura"
-    ))
-    
-    # Plan estándar (más cobertura) - solo si no estamos ajustando precio
-    if not ajustar_precio:
-        cobertura_estandar = cobertura_base * 1.5
-        prima_estandar = _calcular_prima_base(cliente.edad, cobertura_estandar)
-        cotizaciones.append(Cotizacion(
-            prima_mensual=round(prima_estandar, 2),
-            cobertura_fallecimiento=cobertura_estandar,
-            tipo_plan="Plan Estándar",
-            vigencia_anos=25,
-            aseguradora="VidaSegura"
-        ))
-    else:
-        # Plan económico ultra-básico
-        cobertura_minima = cobertura_base * 0.5
-        prima_minima = _calcular_prima_base(cliente.edad, cobertura_minima) * 0.6
-        cotizaciones.append(Cotizacion(
-            prima_mensual=round(prima_minima, 2),
-            cobertura_fallecimiento=cobertura_minima,
-            tipo_plan="Plan Económico (Mínimo)",
-            vigencia_anos=15,
-            aseguradora="VidaSegura"
-        ))
+    # Si no se generaron, crear una básica manual
+    if not cotizaciones:
+        ingresos_base = cliente.ingresos_mensuales or 2000.0
+        cobertura_base = ingresos_base * 12 * 6
+        
+        cotizacion_basica = motor_cotizacion.calcular_cotizacion_completa(
+            cliente=cliente,
+            tipo_cobertura="fallecimiento",
+            cobertura_deseada=cobertura_base * (0.6 if ajustar_precio else 1.0)
+        )
+        
+        cotizacion_basica.tipo_plan = "Plan Básico" + (" (Ajustado)" if ajustar_precio else "")
+        cotizaciones = [cotizacion_basica]
     
     return cotizaciones
 
@@ -327,12 +227,16 @@ def calcular_ahorros_vs_competencia(cotizacion: Cotizacion) -> Dict[str, float]:
     }
 
 def generar_presentacion(cliente: Cliente, cotizaciones: List[Cotizacion]) -> str:
-    """Genera una presentación atractiva de las cotizaciones usando IA con instrucciones"""
+    """Genera una presentación atractiva de las cotizaciones usando IA con información de productos"""
     
     print(f"📋 Generando presentación para {len(cotizaciones)} cotizaciones")
     
     # Cargar instrucciones desde archivo
     instrucciones_quote = cargar_instrucciones_cached('quote')
+    
+    # Obtener información de productos para enriquecer la presentación
+    productos_loader = obtener_productos_loader()
+    motor_cotizacion = obtener_motor_cotizacion()
     
     # Preparar información detallada de las cotizaciones con lógica de cálculo
     cotizaciones_info = ""
@@ -341,6 +245,13 @@ def generar_presentacion(cliente: Cliente, cotizaciones: List[Cotizacion]) -> st
         cobertura_años = cot.cobertura_fallecimiento / (cliente.ingresos_mensuales * 12) if cliente.ingresos_mensuales else 0
         tasa_anual = (cot.prima_mensual * 12) / cot.cobertura_fallecimiento * 1000 if cot.cobertura_fallecimiento else 0
         
+        # Buscar información del producto en el diccionario
+        productos_similares = productos_loader.obtener_productos_por_cobertura("fallecimiento")
+        argumentos_producto = ""
+        if productos_similares:
+            producto_info = productos_similares[0]  # Tomar el primero como ejemplo
+            argumentos_producto = f"\n        • Ventaja: {producto_info.argumentos_venta}"
+        
         cotizaciones_info += f"""
         Opción {i}: {cot.tipo_plan}
         • Prima mensual: €{cot.prima_mensual}
@@ -348,11 +259,23 @@ def generar_presentacion(cliente: Cliente, cotizaciones: List[Cotizacion]) -> st
         • Vigencia: {cot.vigencia_anos} años
         • Equivale a: {cobertura_años:.1f} años de ingresos
         • Tasa: {tasa_anual:.2f}‰ anual
-        • Aseguradora: {cot.aseguradora}
+        • Aseguradora: {cot.aseguradora}{argumentos_producto}
         """
     
     # Identificar la recomendada (la que tiene "Recomendado" en el nombre)
     recomendada = next((i+1 for i, cot in enumerate(cotizaciones) if "Recomendado" in cot.tipo_plan), 1)
+    
+    # Obtener producto recomendado para argumentos adicionales
+    producto_recomendado = productos_loader.recomendar_producto(
+        edad=cliente.edad or 30,
+        num_dependientes=cliente.num_dependientes or 0,
+        ingresos_mensuales=cliente.ingresos_mensuales,
+        profesion=cliente.profesion
+    )
+    
+    argumentos_extra = ""
+    if producto_recomendado:
+        argumentos_extra = f"\n\nARGUMENTOS ADICIONALES DE VENTA:\n- {producto_recomendado.argumentos_venta}\n- Público objetivo: {producto_recomendado.publico_objetivo}"
     
     prompt = f"""
 {instrucciones_quote}
@@ -368,7 +291,7 @@ INGRESOS: €{cliente.ingresos_mensuales}/mes
 PRESUPUESTO INDICADO: €{cliente.nivel_ahorro or 'No especificado'}/mes
 
 === COTIZACIONES CALCULADAS ===
-{cotizaciones_info}
+{cotizaciones_info}{argumentos_extra}
 
 === TU TAREA ===
 Asesora al agente sobre cómo presentar estas cotizaciones:

@@ -1,9 +1,15 @@
 from typing import Dict, Any, Literal
-from models import EstadoBot, EstadoConversacion, Cliente, RecomendacionProducto
-from agents.instructions_loader import cargar_instrucciones_cached
+try:
+    from ..models import EstadoBot, EstadoConversacion, Cliente, RecomendacionProducto
+    from .instructions_loader import cargar_instrucciones_cached
+    from ..config import settings
+    from .llm_client import get_llm_response
+except ImportError:
+    from models import EstadoBot, EstadoConversacion, Cliente, RecomendacionProducto
+    from agents.instructions_loader import cargar_instrucciones_cached
+    from config import settings
+    from agents.llm_client import get_llm_response
 from groq import Groq
-from config import settings
-from agents.llm_client import get_llm_response
 
 
 
@@ -69,7 +75,7 @@ def _evaluar_estado_proceso(state: EstadoBot) -> Dict[str, Any]:
     tiene_cotizaciones = len(state.cotizaciones) > 0
     
     # Evaluar intención del último mensaje
-    intencion_cliente = _analizar_intencion_cliente(state.mensaje_usuario)
+    intencion_cliente = _analizar_intencion_cliente(state.mensaje_usuario, state.cliente)
     
     return {
         "datos_cliente_completos": datos_cliente["completos"],
@@ -125,18 +131,36 @@ def _evaluar_datos_cliente(cliente: Cliente) -> Dict[str, Any]:
         "faltantes_adicionales": faltantes_adicionales
     }
 
-def _analizar_intencion_cliente(mensaje: str) -> str:
-    """Analiza la intención del cliente en su último mensaje"""
+def _analizar_intencion_cliente(mensaje: str, cliente: Cliente = None) -> str:
+    """Analiza la intención del cliente usando IA inteligente"""
     
     if not mensaje or mensaje.strip() == "":
         return "neutral"
     
-    # Solo detectar consultas de monto muy obvias, dejar el resto al LLM
-    mensaje_lower = mensaje.lower()
-    if any(palabra in mensaje_lower for palabra in ["cuánto", "precio", "cuesta"]):
-        return "consulta_monto"
+    try:
+        # Usar el analizador inteligente
+        from .intent_analyzer import analizar_intencion_completa
+        
+        analisis = analizar_intencion_completa(
+            mensaje=mensaje,
+            cliente=cliente,
+            contexto_previo=None
+        )
+        
+        print(f"🎯 Intención detectada: {analisis.intencion_principal}")
+        if analisis.tipo_objecion:
+            print(f"   📍 Objeción: {analisis.tipo_objecion}")
+        
+        return analisis.intencion_principal
+        
+    except Exception as e:
+        print(f"❌ Error análisis inteligente: {e}")
+        return _analizar_intencion_fallback(mensaje)
+
+
+def _analizar_intencion_fallback(mensaje: str) -> str:
+    """Fallback simple para análisis de intención"""
     
-    # Cargar instrucciones para análisis de intención
     instrucciones_orquestador = cargar_instrucciones_cached('orquestador')
     
     prompt = f"""
