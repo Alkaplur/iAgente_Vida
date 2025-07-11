@@ -1,1 +1,1 @@
-web: python webhook_app.py
+web: cd /app && python webhook_app.py
