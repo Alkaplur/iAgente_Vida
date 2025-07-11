@@ -60,34 +60,64 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Header principal
-st.markdown("""
-<div class="main-header">
-    <h1>🤖 iAgente_Vida</h1>
-    <p><em>Sistema Multiagente para Asesoramiento en Seguros de Vida</em></p>
-</div>
-""", unsafe_allow_html=True)
+# Header principal con logo
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    # Tu logo personalizado - reemplaza esta URL con la de tu logo
+    try:
+        st.image("https://i.imgur.com/placeholder.png", width=150)  # Reemplaza con tu logo
+    except:
+        # Fallback si no se puede cargar el logo
+        st.markdown("🤖💼", unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="text-align: center;">
+        <h1 style="color: #0066cc;">iAgente_Vida</h1>
+        <p style="color: #666;"><em>Sistema Multiagente para Asesoramiento en Seguros de Vida</em></p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Sidebar con información del cliente
 with st.sidebar:
     st.header("👤 Perfil del Cliente")
     
+    # Cargar datos de ejemplo si se activó
+    if "ejemplo_datos" in st.session_state:
+        ejemplo = st.session_state.ejemplo_datos
+        del st.session_state.ejemplo_datos  # Limpiar para próxima vez
+    else:
+        ejemplo = {
+            "nombre": "",
+            "edad": 30,
+            "estado_civil": 0,
+            "profesion": "",
+            "ingresos": 0,
+            "gastos": 0,
+            "dependientes": 0,
+            "salud": 0
+        }
+    
     # Datos básicos
     st.subheader("📋 Datos Básicos")
-    cliente_nombre = st.text_input("Nombre", value="Juan Pérez", help="Nombre del cliente")
-    cliente_edad = st.number_input("Edad", min_value=18, max_value=80, value=35)
-    cliente_estado_civil = st.selectbox("Estado Civil", ["soltero", "casado", "divorciado", "viudo"], index=1)
-    cliente_profesion = st.text_input("Profesión", value="Ingeniero")
+    cliente_nombre = st.text_input("Nombre", value=ejemplo["nombre"], help="Nombre del cliente")
+    cliente_edad = st.number_input("Edad", min_value=18, max_value=80, value=ejemplo["edad"])
+    
+    estado_civil_options = ["soltero", "casado", "divorciado", "viudo"]
+    estado_civil_index = estado_civil_options.index(ejemplo["estado_civil"]) if ejemplo["estado_civil"] in estado_civil_options else 0
+    cliente_estado_civil = st.selectbox("Estado Civil", estado_civil_options, index=estado_civil_index)
+    cliente_profesion = st.text_input("Profesión", value=ejemplo["profesion"])
     
     # Datos financieros
     st.subheader("💰 Información Financiera")
-    cliente_ingresos = st.number_input("Ingresos mensuales (€)", min_value=0, value=3500, step=100)
-    cliente_gastos = st.number_input("Gastos fijos mensuales (€)", min_value=0, value=2200, step=100)
-    cliente_dependientes = st.number_input("Número de dependientes", min_value=0, value=2)
+    cliente_ingresos = st.number_input("Ingresos mensuales (€)", min_value=0, value=ejemplo["ingresos"], step=100)
+    cliente_gastos = st.number_input("Gastos fijos mensuales (€)", min_value=0, value=ejemplo["gastos"], step=100)
+    cliente_dependientes = st.number_input("Número de dependientes", min_value=0, value=ejemplo["dependientes"])
     
     # Datos adicionales
     st.subheader("🏥 Información Adicional")
-    cliente_salud = st.selectbox("Salud relevante", ["no fumador", "fumador", "deportista", "no especificado"], index=0)
+    salud_options = ["no especificado", "no fumador", "fumador", "deportista"]
+    salud_index = salud_options.index(ejemplo["salud"]) if ejemplo["salud"] in salud_options else 0
+    cliente_salud = st.selectbox("Salud relevante", salud_options, index=salud_index)
     cliente_seguro_actual = st.selectbox("¿Tiene seguro de vida actual?", ["No", "Sí - Básico", "Sí - Completo"], index=0)
     
     # Cálculo automático de ingreso disponible
@@ -113,7 +143,17 @@ with st.sidebar:
     
     with col2:
         if st.button("📋 Ejemplo", help="Cargar datos de ejemplo", use_container_width=True):
-            st.session_state.ejemplo_cargado = True
+            # Cargar datos de ejemplo
+            st.session_state.ejemplo_datos = {
+                "nombre": "Ana García",
+                "edad": 35,
+                "estado_civil": "casado",
+                "profesion": "Directora de Marketing",
+                "ingresos": 4200,
+                "gastos": 2800,
+                "dependientes": 2,
+                "salud": "no fumador"
+            }
             st.rerun()
 
 # Función para inicializar estado
@@ -148,20 +188,24 @@ def inicializar_estado():
         agente_activo="orquestador"
     )
 
-# Inicializar estado si no existe
-if "estado_bot" not in st.session_state:
+# Inicializar estado si no existe o si no tiene la estructura correcta
+if "estado_bot" not in st.session_state or not hasattr(st.session_state.estado_bot, 'mensajes'):
     st.session_state.estado_bot = inicializar_estado()
 
-# Actualizar datos del cliente en tiempo real
-st.session_state.estado_bot.cliente.nombre = cliente_nombre
-st.session_state.estado_bot.cliente.edad = cliente_edad
-st.session_state.estado_bot.cliente.estado_civil = cliente_estado_civil
-st.session_state.estado_bot.cliente.profesion = cliente_profesion
-st.session_state.estado_bot.cliente.ingresos_mensuales = float(cliente_ingresos)
-st.session_state.estado_bot.cliente.gastos_fijos_mensuales = float(cliente_gastos)
-st.session_state.estado_bot.cliente.num_dependientes = int(cliente_dependientes)
-st.session_state.estado_bot.cliente.salud_relevante = cliente_salud
-st.session_state.estado_bot.cliente.tiene_seguro_vida = (cliente_seguro_actual != "No")
+# Actualizar datos del cliente en tiempo real (solo si el estado existe correctamente)
+try:
+    st.session_state.estado_bot.cliente.nombre = cliente_nombre
+    st.session_state.estado_bot.cliente.edad = cliente_edad
+    st.session_state.estado_bot.cliente.estado_civil = cliente_estado_civil
+    st.session_state.estado_bot.cliente.profesion = cliente_profesion
+    st.session_state.estado_bot.cliente.ingresos_mensuales = float(cliente_ingresos) if cliente_ingresos else 0.0
+    st.session_state.estado_bot.cliente.gastos_fijos_mensuales = float(cliente_gastos) if cliente_gastos else 0.0
+    st.session_state.estado_bot.cliente.num_dependientes = int(cliente_dependientes)
+    st.session_state.estado_bot.cliente.salud_relevante = cliente_salud
+    st.session_state.estado_bot.cliente.tiene_seguro_vida = (cliente_seguro_actual != "No")
+except Exception as e:
+    # Si hay error actualizando, reinicializar
+    st.session_state.estado_bot = inicializar_estado()
 
 # Área principal de chat
 st.subheader("💬 Conversación con iAgente_Vida")
@@ -180,22 +224,31 @@ with chat_container:
                 with st.chat_message("assistant", avatar="🤖"):
                     st.write(mensaje.get("content"))
     else:
-        # Mensaje de bienvenida
+        # Mensaje de bienvenida dinámico
         with st.chat_message("assistant", avatar="🤖"):
-            st.write(f"""
-            ¡Hola! Soy **iAgente_Vida**, tu asistente especializado en seguros de vida.
+            mensaje_bienvenida = "¡Hola! Soy **iAgente_Vida**, tu asistente especializado en seguros de vida.\n\n"
             
-            Veo que estás asesorando a **{cliente_nombre}** ({cliente_edad} años).
+            if cliente_nombre:
+                mensaje_bienvenida += f"Veo que estás asesorando a **{cliente_nombre}**"
+                if cliente_edad > 18:
+                    mensaje_bienvenida += f" ({cliente_edad} años)"
+                mensaje_bienvenida += ".\n\n"
+                
+                if cliente_ingresos > 0:
+                    mensaje_bienvenida += f"Con ingresos de **€{cliente_ingresos:,.0f}/mes**"
+                    if cliente_dependientes > 0:
+                        mensaje_bienvenida += f" y **{cliente_dependientes} dependientes**"
+                    mensaje_bienvenida += ", puedo ayudarte a encontrar la protección ideal.\n\n"
+            else:
+                mensaje_bienvenida += "Para comenzar, introduce los datos del cliente en el panel lateral.\n\n"
             
-            Con sus ingresos de **€{cliente_ingresos:,.0f}/mes** y **{cliente_dependientes} dependientes**, 
-            puedo ayudarte a encontrar la protección ideal.
+            mensaje_bienvenida += """**¿En qué puedo ayudarte hoy?**
+- Calcular cobertura recomendada
+- Generar cotizaciones personalizadas  
+- Analizar capacidad de pago
+- Comparar tipos de productos"""
             
-            **¿En qué puedo ayudarte hoy?**
-            - Calcular cobertura recomendada
-            - Generar cotizaciones personalizadas  
-            - Analizar capacidad de pago
-            - Comparar tipos de productos
-            """)
+            st.write(mensaje_bienvenida)
 
 # Input de chat
 if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
@@ -280,19 +333,4 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Debug info (solo en desarrollo)
-if st.checkbox("🔧 Mostrar información de debug", value=False):
-    with st.expander("Estado completo del bot"):
-        st.json({
-            "etapa": estado_actual,
-            "agente_activo": st.session_state.estado_bot.agente_activo,
-            "next_agent": st.session_state.estado_bot.next_agent,
-            "cliente": {
-                "nombre": st.session_state.estado_bot.cliente.nombre,
-                "edad": st.session_state.estado_bot.cliente.edad,
-                "ingresos": st.session_state.estado_bot.cliente.ingresos_mensuales,
-                "dependientes": st.session_state.estado_bot.cliente.num_dependientes
-            },
-            "mensajes_count": len(st.session_state.estado_bot.mensajes),
-            "cotizaciones_count": len(st.session_state.estado_bot.cotizaciones)
-        })
+# Debug info removido para versión demo
