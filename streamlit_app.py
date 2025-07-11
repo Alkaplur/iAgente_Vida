@@ -346,19 +346,26 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
         with st.spinner("🤖 iAgente_Vida está procesando..."):
             try:
                 # Debug: mostrar configuración antes de crear el grafo
-                try:
-                    from src.config import settings
-                    st.write("🔍 Config:", f"Provider: {settings.llm_provider}, Model: {settings.llm_model}")
-                    st.write("🔍 API Key:", f"OpenAI: {'✅' if settings.openai_api_key and settings.openai_api_key != 'tu_openai_api_key_aqui' else '❌'}")
-                except Exception as config_error:
-                    st.write("🔍 Error config:", str(config_error)[:100])
+                with st.expander("🔍 Debug Info", expanded=False):
+                    try:
+                        from src.config import settings
+                        st.write("**Config:**", f"Provider: {settings.llm_provider}, Model: {settings.llm_model}")
+                        st.write("**API Key:**", f"OpenAI: {'✅' if settings.openai_api_key and settings.openai_api_key != 'tu_openai_api_key_aqui' else '❌'}")
+                    except Exception as config_error:
+                        st.write("**Error config:**", str(config_error)[:100])
                 
                 # Crear el grafo y procesar
                 grafo = crear_grafo()
                 resultado = grafo.invoke(st.session_state.estado_bot)
                 
                 # Debug: Mostrar qué devuelve el sistema
-                st.write("🔍 Debug resultado:", str(type(resultado))[:100])
+                with st.expander("🔍 Sistema Debug", expanded=False):
+                    st.write("**Tipo resultado:**", str(type(resultado))[:100])
+                    if hasattr(resultado, 'mensajes'):
+                        st.write("**Mensajes count:**", len(resultado.mensajes))
+                        if resultado.mensajes:
+                            st.write("**Último mensaje:**", resultado.mensajes[-1])
+                    st.write("**Estructura completa:**", str(resultado)[:300])
                 
                 # Verificar que el resultado tiene la estructura correcta
                 if hasattr(resultado, 'mensajes') and hasattr(resultado, 'cliente'):
@@ -385,11 +392,20 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
                     agregar_mensaje("assistant", respuesta_contextual)
                     
             except ImportError as ie:
-                st.error(f"❌ Error de importación (falta dependencia): {str(ie)}")
+                with st.expander("❌ Error de Importación", expanded=True):
+                    st.error(f"**Falta dependencia:** {str(ie)}")
+                    st.write("**Posibles causas:**")
+                    st.write("- Falta instalar una dependencia en requirements.txt")
+                    st.write("- Falta configurar variables de entorno")
                 respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
                 agregar_mensaje("assistant", respuesta_contextual)
             except Exception as grafo_error:
-                st.warning(f"⚠️ Sistema multiagente no disponible: {str(grafo_error)[:100]}")
+                with st.expander("⚠️ Error Sistema Multiagente", expanded=True):
+                    st.warning(f"**Error:** {str(grafo_error)}")
+                    st.write("**Tipo error:** ", type(grafo_error).__name__)
+                    if hasattr(grafo_error, '__traceback__'):
+                        import traceback
+                        st.code(traceback.format_exc())
                 # Usar respuesta contextual como fallback
                 respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
                 agregar_mensaje("assistant", respuesta_contextual)
