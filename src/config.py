@@ -11,17 +11,22 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     
     # API Keys
-    groq_api_key: str
-    openai_api_key: str
+    groq_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     
     # Bot Configuration
     bot_name: str = "iAgente_Vida"
     
-    # WhatsApp Business API Configuration
+    # WhatsApp Business API Configuration (Legacy - usar Woztell)
     whatsapp_token: Optional[str] = None
-    whatsapp_phone_number_id: Optional[str] = 521258697744977
+    whatsapp_phone_number_id: Optional[str] = None
     whatsapp_verify_token: Optional[str] = None
+    
+    # Woztell Configuration
+    woztell_business_token: Optional[str] = None
+    woztell_webhook_url: Optional[str] = None
+    woztell_webhook_secret: Optional[str] = None
     
     # Chatwoot Configuration
     chatwoot_base_url: Optional[str] = None
