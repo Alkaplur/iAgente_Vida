@@ -23,7 +23,7 @@ except ImportError:
 
 # Configurar página
 st.set_page_config(
-    page_title="iAgente_Vida - Demo",
+    page_title="iAgente_Vida - Demo v2",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
