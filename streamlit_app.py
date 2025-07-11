@@ -344,26 +344,45 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
         
         # Procesar con el sistema multiagente
         with st.spinner("🤖 iAgente_Vida está procesando..."):
-            # Crear el grafo y procesar
-            grafo = crear_grafo()
-            resultado = grafo.invoke(st.session_state.estado_bot)
-            
-            # Verificar que el resultado tiene la estructura correcta
-            if hasattr(resultado, 'mensajes') and hasattr(resultado, 'cliente'):
-                # Solo actualizar si el resultado es un objeto válido de EstadoBot
-                st.session_state.estado_bot = resultado
-            elif isinstance(resultado, dict) and 'mensajes' in resultado:
-                # Si el resultado es un diccionario, extraer la respuesta y mantener estructura
-                if resultado['mensajes']:
-                    ultimo_mensaje = resultado['mensajes'][-1]
-                    if ultimo_mensaje.get('role') == 'assistant':
-                        agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta procesada.'))
-                    else:
-                        # Respuesta contextual basada en el input del usuario
-                        respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
-                        agregar_mensaje("assistant", respuesta_contextual)
-            else:
-                # Respuesta contextual en lugar de genérica
+            try:
+                # Crear el grafo y procesar
+                grafo = crear_grafo()
+                resultado = grafo.invoke(st.session_state.estado_bot)
+                
+                # Debug: Mostrar qué devuelve el sistema
+                st.write("🔍 Debug resultado:", str(type(resultado))[:100])
+                
+                # Verificar que el resultado tiene la estructura correcta
+                if hasattr(resultado, 'mensajes') and hasattr(resultado, 'cliente'):
+                    # Solo actualizar si el resultado es un objeto válido de EstadoBot
+                    st.session_state.estado_bot = resultado
+                    # Extraer último mensaje del sistema multiagente
+                    if resultado.mensajes:
+                        ultimo_mensaje = resultado.mensajes[-1]
+                        if ultimo_mensaje.get('role') == 'assistant':
+                            agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta del sistema multiagente.'))
+                elif isinstance(resultado, dict) and 'mensajes' in resultado:
+                    # Si el resultado es un diccionario, extraer la respuesta y mantener estructura
+                    if resultado['mensajes']:
+                        ultimo_mensaje = resultado['mensajes'][-1]
+                        if ultimo_mensaje.get('role') == 'assistant':
+                            agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta procesada.'))
+                        else:
+                            # Respuesta contextual basada en el input del usuario
+                            respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
+                            agregar_mensaje("assistant", respuesta_contextual)
+                else:
+                    # Respuesta contextual en lugar de genérica
+                    respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
+                    agregar_mensaje("assistant", respuesta_contextual)
+                    
+            except ImportError as ie:
+                st.error(f"❌ Error de importación (falta dependencia): {str(ie)}")
+                respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
+                agregar_mensaje("assistant", respuesta_contextual)
+            except Exception as grafo_error:
+                st.warning(f"⚠️ Sistema multiagente no disponible: {str(grafo_error)[:100]}")
+                # Usar respuesta contextual como fallback
                 respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
                 agregar_mensaje("assistant", respuesta_contextual)
         
