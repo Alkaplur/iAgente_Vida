@@ -81,13 +81,13 @@ with st.sidebar:
     else:
         ejemplo = {
             "nombre": "",
-            "edad": 18,
-            "estado_civil": "soltero",
+            "edad": 25,
+            "estado_civil": "",
             "profesion": "",
             "ingresos": 0,
             "gastos": 0,
             "dependientes": 0,
-            "salud": "no especificado"
+            "salud": ""
         }
     
     # Datos básicos
@@ -95,7 +95,7 @@ with st.sidebar:
     cliente_nombre = st.text_input("Nombre", value=ejemplo["nombre"], help="Nombre del cliente")
     cliente_edad = st.number_input("Edad", min_value=18, max_value=80, value=ejemplo["edad"])
     
-    estado_civil_options = ["soltero", "casado", "divorciado", "viudo"]
+    estado_civil_options = ["-- Seleccionar --", "soltero", "casado", "divorciado", "viudo"]
     try:
         estado_civil_index = estado_civil_options.index(ejemplo["estado_civil"]) if ejemplo["estado_civil"] in estado_civil_options else 0
     except:
@@ -111,7 +111,7 @@ with st.sidebar:
     
     # Datos adicionales
     st.subheader("🏥 Información Adicional")
-    salud_options = ["no especificado", "no fumador", "fumador", "deportista"]
+    salud_options = ["-- Seleccionar --", "no fumador", "fumador", "deportista", "otros"]
     try:
         salud_index = salud_options.index(ejemplo["salud"]) if ejemplo["salud"] in salud_options else 0
     except:
@@ -220,6 +220,49 @@ def agregar_mensaje(role, content):
                 "timestamp": datetime.now().isoformat()
             })
 
+def generar_respuesta_contextual(mensaje_usuario, estado_bot):
+    """Genera una respuesta contextual basada en el mensaje del usuario"""
+    mensaje = mensaje_usuario.lower().strip()
+    
+    # Respuestas basadas en palabras clave
+    if any(word in mensaje for word in ["hola", "hello", "hi", "buenas"]):
+        return f"¡Hola! Soy iAgente_Vida, tu asistente especializado en seguros de vida. Veo que tienes {estado_bot.cliente.edad} años. ¿En qué puedo ayudarte hoy?"
+    
+    elif any(word in mensaje for word in ["seguro", "vida", "protección"]):
+        if estado_bot.cliente.ingresos_mensuales > 0:
+            return f"Perfecto, hablemos de seguros de vida. Con ingresos de €{estado_bot.cliente.ingresos_mensuales:,.0f}/mes, podemos encontrar una cobertura ideal para ti. ¿Tienes dependientes que proteger?"
+        else:
+            return "Me alegra que te interesen los seguros de vida. Para recomendarte la mejor opción, necesito conocer tu situación financiera. ¿Podrías completar tus ingresos mensuales?"
+    
+    elif any(word in mensaje for word in ["precio", "costo", "cotización", "cuanto"]):
+        if estado_bot.cliente.ingresos_mensuales > 0:
+            prima_estimada = estado_bot.cliente.ingresos_mensuales * 0.05  # 5% como estimación
+            return f"Basándome en tu perfil, una prima estimada sería de €{prima_estimada:.0f}/mes. ¿Te gustaría que analice opciones específicas según tus necesidades?"
+        else:
+            return "Para calcular un precio personalizado, necesito conocer mejor tu situación. ¿Podrías completar tus datos financieros en el panel lateral?"
+    
+    elif any(word in mensaje for word in ["familia", "hijos", "esposa", "marido", "dependientes"]):
+        return f"Entiendo que quieres proteger a tu familia. Con {estado_bot.cliente.num_dependientes} dependientes, es muy importante tener una buena cobertura. ¿Cuál es tu principal preocupación?"
+    
+    elif any(word in mensaje for word in ["edad", "años"]):
+        return f"A los {estado_bot.cliente.edad} años, es el momento perfecto para asegurar una buena protección. Las primas son más favorables cuando eres joven. ¿Qué tipo de cobertura te interesa más?"
+    
+    elif any(word in mensaje for word in ["trabajo", "profesión", "empleo"]):
+        if estado_bot.cliente.profesion:
+            return f"Como {estado_bot.cliente.profesion}, entiendo que valoras la estabilidad. ¿Tu trabajo tiene algún riesgo particular que debamos considerar?"
+        else:
+            return "Me gustaría conocer tu profesión para recomendarte la cobertura más adecuada. ¿Podrías completar ese dato?"
+    
+    else:
+        # Respuesta genérica pero más personalizada
+        respuestas_genericas = [
+            f"Gracias por tu consulta. Con la información que tengo de tu perfil, puedo ayudarte mejor. ¿Hay algo específico sobre seguros de vida que te preocupe?",
+            f"Perfecto, estoy aquí para ayudarte. Veo que tienes {estado_bot.cliente.edad} años. ¿Qué aspecto de los seguros de vida te interesa más?",
+            f"Entiendo tu interés. Para darte la mejor recomendación, ¿podrías contarme cuál es tu principal objetivo al buscar un seguro de vida?"
+        ]
+        import random
+        return random.choice(respuestas_genericas)
+
 # Inicializar estado si no existe o si no tiene la estructura correcta
 validar_y_reparar_estado()
 
@@ -316,11 +359,13 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
                     if ultimo_mensaje.get('role') == 'assistant':
                         agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta procesada.'))
                     else:
-                        # Respuesta genérica si no hay mensaje de asistente
-                        agregar_mensaje("assistant", "He analizado tu consulta. ¿En qué más puedo ayudarte?")
+                        # Respuesta contextual basada en el input del usuario
+                        respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
+                        agregar_mensaje("assistant", respuesta_contextual)
             else:
-                # Si el resultado no tiene la estructura correcta, respuesta genérica
-                agregar_mensaje("assistant", "He procesado tu consulta. ¿Necesitas ayuda con algo específico sobre seguros de vida?")
+                # Respuesta contextual en lugar de genérica
+                respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
+                agregar_mensaje("assistant", respuesta_contextual)
         
         # Forzar actualización de la interfaz
         st.rerun()
