@@ -2,8 +2,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 from typing import Optional
 
-# Forzar recarga de .env
-load_dotenv(override=True)
+# Cargar .env.local primero (si existe), luego .env
+import os
+if os.path.exists('.env.local'):
+    load_dotenv('.env.local', override=True)
+else:
+    load_dotenv('.env', override=True)
 
 class Settings(BaseSettings):
     # LLM Configuration
