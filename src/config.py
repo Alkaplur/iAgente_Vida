@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # WhatsApp Business API Configuration
     whatsapp_token: Optional[str] = None
-    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = 521258697744977
     whatsapp_verify_token: Optional[str] = None
     
     # Chatwoot Configuration

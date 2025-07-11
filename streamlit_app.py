@@ -60,13 +60,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Header principal con logo
+# Header principal
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    # Logo placeholder - reemplaza con tu logo cuando lo tengas
     st.markdown("""
     <div style="text-align: center; margin-bottom: 20px;">
-        <div style="font-size: 4em; margin-bottom: 10px;">🤖💼🛡️</div>
         <h1 style="color: #0066cc; margin: 0;">iAgente_Vida</h1>
         <p style="color: #666; margin: 0;"><em>Sistema Multiagente para Asesoramiento en Seguros de Vida</em></p>
     </div>
@@ -83,13 +81,13 @@ with st.sidebar:
     else:
         ejemplo = {
             "nombre": "",
-            "edad": 30,
-            "estado_civil": 0,
+            "edad": 18,
+            "estado_civil": "soltero",
             "profesion": "",
             "ingresos": 0,
             "gastos": 0,
             "dependientes": 0,
-            "salud": 0
+            "salud": "no especificado"
         }
     
     # Datos básicos
@@ -98,7 +96,10 @@ with st.sidebar:
     cliente_edad = st.number_input("Edad", min_value=18, max_value=80, value=ejemplo["edad"])
     
     estado_civil_options = ["soltero", "casado", "divorciado", "viudo"]
-    estado_civil_index = estado_civil_options.index(ejemplo["estado_civil"]) if ejemplo["estado_civil"] in estado_civil_options else 0
+    try:
+        estado_civil_index = estado_civil_options.index(ejemplo["estado_civil"]) if ejemplo["estado_civil"] in estado_civil_options else 0
+    except:
+        estado_civil_index = 0
     cliente_estado_civil = st.selectbox("Estado Civil", estado_civil_options, index=estado_civil_index)
     cliente_profesion = st.text_input("Profesión", value=ejemplo["profesion"])
     
@@ -111,7 +112,10 @@ with st.sidebar:
     # Datos adicionales
     st.subheader("🏥 Información Adicional")
     salud_options = ["no especificado", "no fumador", "fumador", "deportista"]
-    salud_index = salud_options.index(ejemplo["salud"]) if ejemplo["salud"] in salud_options else 0
+    try:
+        salud_index = salud_options.index(ejemplo["salud"]) if ejemplo["salud"] in salud_options else 0
+    except:
+        salud_index = 0
     cliente_salud = st.selectbox("Salud relevante", salud_options, index=salud_index)
     cliente_seguro_actual = st.selectbox("¿Tiene seguro de vida actual?", ["No", "Sí - Básico", "Sí - Completo"], index=0)
     

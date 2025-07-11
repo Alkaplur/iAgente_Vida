@@ -26,6 +26,7 @@ streamlit>=1.28.0
 
 # Para integración WhatsApp
 flask>=2.3.0
+flask-limiter>=3.5.0
 gunicorn>=21.0.0
 
 # Para desarrollo
