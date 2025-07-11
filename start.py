@@ -17,7 +17,7 @@ def main():
     
     try:
         # Importar y ejecutar main
-        from main import conversacion_interactiva
+        from src.main import conversacion_interactiva
         conversacion_interactiva()
     except Exception as e:
         print(f"❌ Error: {e}")

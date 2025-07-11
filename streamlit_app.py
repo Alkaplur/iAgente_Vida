@@ -202,15 +202,11 @@ with chat_container:
                 with st.chat_message("assistant", avatar="🤖"):
                     st.write(mensaje.get("content"))
     else:
-        # Mensaje de bienvenida estilo WhatsApp
+        # Mensaje de bienvenida igual al original
         with st.chat_message("assistant", avatar="🤖"):
-            mensaje_bienvenida = """¡Hola! 👋 Soy **iAgente_Vida**, tu asistente especializado en seguros de vida.
+            mensaje_bienvenida = """🤖 ¡Hola! Soy iAgente_Vida, tu asistente para vender seguros de vida.
 
-Para ayudarte mejor, vamos a empezar paso a paso:
-
-**¿Cuál es tu nombre?** 😊
-
-_Una vez que me digas tu nombre, te haré algunas preguntas sencillas para conocer tu perfil y encontrar el seguro de vida perfecto para ti._"""
+📝 Cuéntame sobre tu cliente y te ayudo a crear la propuesta perfecta."""
             
             st.write(mensaje_bienvenida)
 
@@ -252,9 +248,9 @@ if prompt := st.chat_input("Escribe tu mensaje..."):
                     except Exception as config_error:
                         st.write("**Error config:**", str(config_error)[:100])
                 
-                # Crear el grafo y procesar
-                grafo = crear_grafo()
-                resultado = grafo.invoke(st.session_state.estado_bot)
+                # Usar el mismo grafo que el main.py original
+                from src.graph import graph
+                resultado = graph.invoke(st.session_state.estado_bot)
                 
                 # Debug: Mostrar qué devuelve el sistema - GUARDAR EN SESSION STATE
                 debug_info = {
@@ -277,20 +273,14 @@ if prompt := st.chat_input("Escribe tu mensaje..."):
                         if ultimo_mensaje.get('role') == 'assistant':
                             agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta del sistema multiagente.'))
                 elif isinstance(resultado, dict):
-                    # NUEVO: Manejar diccionario con respuesta_bot
-                    if 'respuesta_bot' in resultado:
-                        # El sistema devolvió respuesta_bot directamente
-                        agregar_mensaje("assistant", resultado['respuesta_bot'])
-                        # Actualizar el estado con los datos del diccionario si los hay
-                        if 'etapa' in resultado:
-                            st.session_state.estado_bot.etapa = resultado['etapa']
-                    elif 'mensajes' in resultado and resultado['mensajes']:
-                        # Si hay mensajes en el diccionario
-                        ultimo_mensaje = resultado['mensajes'][-1]
-                        if ultimo_mensaje.get('role') == 'assistant':
-                            agregar_mensaje("assistant", ultimo_mensaje.get('content', 'Respuesta procesada.'))
+                    # Manejar el resultado como en el main.py original
+                    st.session_state.estado_bot = EstadoBot(**resultado)
+                    
+                    # Mostrar respuesta del bot si existe
+                    if st.session_state.estado_bot.respuesta_bot:
+                        agregar_mensaje("assistant", st.session_state.estado_bot.respuesta_bot)
                     else:
-                        # Respuesta contextual basada en el input del usuario
+                        # Fallback si no hay respuesta
                         respuesta_contextual = generar_respuesta_contextual(prompt, st.session_state.estado_bot)
                         agregar_mensaje("assistant", respuesta_contextual)
                 else:
