@@ -23,7 +23,6 @@ except ImportError:
     from agents.instructions_loader import cargar_instrucciones_cached
     from agents.llm_client import get_llm_response
 
-from groq import Groq
 import os
 
 

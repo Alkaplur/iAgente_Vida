@@ -345,6 +345,14 @@ if prompt := st.chat_input("Escribe tu consulta sobre seguros de vida..."):
         # Procesar con el sistema multiagente
         with st.spinner("🤖 iAgente_Vida está procesando..."):
             try:
+                # Debug: mostrar configuración antes de crear el grafo
+                try:
+                    from src.config import settings
+                    st.write("🔍 Config:", f"Provider: {settings.llm_provider}, Model: {settings.llm_model}")
+                    st.write("🔍 API Key:", f"OpenAI: {'✅' if settings.openai_api_key and settings.openai_api_key != 'tu_openai_api_key_aqui' else '❌'}")
+                except Exception as config_error:
+                    st.write("🔍 Error config:", str(config_error)[:100])
+                
                 # Crear el grafo y procesar
                 grafo = crear_grafo()
                 resultado = grafo.invoke(st.session_state.estado_bot)

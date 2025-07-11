@@ -9,21 +9,14 @@ except ImportError:
     from agents.instructions_loader import cargar_instrucciones_cached
     from config import settings
     from agents.llm_client import get_llm_response
-from groq import Groq
 
 
 
 # Cliente LLM configurado según settings
 def _get_llm_client():
     """Obtiene el cliente LLM según la configuración"""
-    if settings.llm_provider == "openai":
-        from openai import OpenAI
-        return OpenAI(api_key=settings.openai_api_key)
-    elif settings.llm_provider == "groq":
-        return Groq(api_key=settings.groq_api_key)
-    else:
-        from openai import OpenAI
-        return OpenAI(api_key=settings.openai_api_key)  # fallback
+    from openai import OpenAI
+    return OpenAI(api_key=settings.openai_api_key)
 
 llm_client = _get_llm_client()
 
