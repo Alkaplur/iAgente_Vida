@@ -9,6 +9,15 @@ if os.path.exists('.env.local'):
 else:
     load_dotenv('.env', override=True)
 
+# Para Streamlit Cloud, también intentar cargar desde st.secrets
+try:
+    import streamlit as st
+    if hasattr(st, 'secrets'):
+        for key, value in st.secrets.items():
+            os.environ[key] = str(value)
+except:
+    pass
+
 class Settings(BaseSettings):
     # LLM Configuration
     llm_provider: str = "openai"
