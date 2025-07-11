@@ -21,6 +21,7 @@ class Cliente(BaseModel):
     
     # Datos financieros
     ingresos_mensuales: Optional[float] = None
+    gastos_fijos_mensuales: Optional[float] = None  # Nuevo campo para validación de capacidad de pago
     nivel_ahorro: Optional[float] = None  # Capacidad de ahorro mensual
     compromisos_financieros: Optional[str] = None
     patrimonio: Optional[str] = None
@@ -38,9 +39,15 @@ class Cliente(BaseModel):
     objetivos_financieros: Optional[str] = None
     herencia_fiscal: Optional[str] = None
     presupuesto_maximo_mensual: Optional[float] = None
+    preferencias_fiscales: Optional[str] = None  # Nuevo campo para preferencias tributarias
     
-    # Salud
-    salud_relevante: Optional[str] = None
+    # Salud y riders
+    salud_relevante: Optional[str] = None  # "fumador", "no fumador", "deportista", etc.
+    riders_deseados: Optional[List[str]] = None  # Lista de riders que interesan al cliente
+    
+    # Datos de contacto (para WhatsApp/Chatwoot)
+    telefono: Optional[str] = None
+    email: Optional[str] = None
 
 class RecomendacionProducto(BaseModel):
     """Recomendación de producto del needs-based selling"""

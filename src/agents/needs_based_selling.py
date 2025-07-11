@@ -84,20 +84,25 @@ def _generar_respuesta_natural_llm(state: EstadoBot, instrucciones: str) -> str:
     
     # Calcular recomendación de monto si tenemos datos suficientes
     monto_recomendado = ""
+    validacion_capacidad = ""
     if state.cliente.ingresos_mensuales:
         ingresos_base = state.cliente.ingresos_mensuales
-        if state.cliente.num_dependientes and state.cliente.num_dependientes > 0 and state.cliente.edad and state.cliente.edad < 45:
-            # Familia joven - protección completa
-            monto_calc = ingresos_base * 12 * 6  # Reducido de 10 a 6
-            monto_recomendado = f"MONTO RECOMENDADO: €{monto_calc:,.0f} (6 años de ingresos para familia joven)"
-        elif state.cliente.edad and state.cliente.edad > 45:
-            # Edad madura - ahorro + protección
-            monto_calc = ingresos_base * 12 * 5  # Reducido de 8 a 5
-            monto_recomendado = f"MONTO RECOMENDADO: €{monto_calc:,.0f} (5 años de ingresos para edad madura)"
+        # Aplicar rango 6-10 años según instrucciones (línea 151)
+        if state.cliente.num_dependientes and state.cliente.num_dependientes > 0:
+            # Protección familiar - usar rango alto (8-10 años) según instrucciones
+            monto_min = ingresos_base * 12 * 6  # Mínimo del rango
+            monto_max = ingresos_base * 12 * 10  # Máximo del rango
+            monto_calc = ingresos_base * 12 * 8  # Valor medio para familia
+            monto_recomendado = f"MONTO RECOMENDADO: €{monto_calc:,.0f} (rango €{monto_min:,.0f} - €{monto_max:,.0f}, 6-10 años de ingresos para protección familiar)"
         else:
-            # Joven sin dependientes - protección básica
-            monto_calc = ingresos_base * 12 * 4  # Reducido de 6 a 4
-            monto_recomendado = f"MONTO RECOMENDADO: €{monto_calc:,.0f} (4 años de ingresos para protección básica)"
+            # Sin dependientes - usar rango bajo (6-7 años) según instrucciones
+            monto_min = ingresos_base * 12 * 6  # Mínimo del rango
+            monto_max = ingresos_base * 12 * 8  # Rango reducido sin dependientes
+            monto_calc = ingresos_base * 12 * 6  # Valor conservador
+            monto_recomendado = f"MONTO RECOMENDADO: €{monto_calc:,.0f} (rango €{monto_min:,.0f} - €{monto_max:,.0f}, 6-8 años de ingresos para protección básica)"
+        
+        # Validar capacidad de pago si tenemos datos de gastos
+        validacion_capacidad = _validar_capacidad_pago(state.cliente)
     
     # Obtener instrucciones específicas del orquestador
     instrucciones_orquestador = ""
@@ -116,6 +121,10 @@ def _generar_respuesta_natural_llm(state: EstadoBot, instrucciones: str) -> str:
 
 === DATOS DEL CLIENTE DEL AGENTE ===
 {datos_cliente}
+
+{monto_recomendado}
+
+{validacion_capacidad}
 
 === MENSAJE DEL AGENTE ===
 "{state.mensaje_usuario}"
@@ -430,3 +439,38 @@ def _generar_recomendacion_producto(cliente: Cliente) -> RecomendacionProducto:
         urgencia=urgencia,
         productos_adicionales=productos_adicionales if productos_adicionales else None
     )
+
+
+def _validar_capacidad_pago(cliente: Cliente) -> str:
+    """
+    Valida la capacidad de pago del cliente según las reglas de las instrucciones
+    Implementa las reglas de validación (líneas 63-97 de needs_based_instructions.txt)
+    """
+    if not cliente.ingresos_mensuales or not cliente.gastos_fijos_mensuales:
+        return "INFO VALIDACIÓN: No se puede validar capacidad de pago sin datos de ingresos y gastos."
+    
+    try:
+        # Calcular ingreso disponible
+        ingreso_disponible = cliente.ingresos_mensuales - cliente.gastos_fijos_mensuales
+        
+        if ingreso_disponible <= 0:
+            return "⚠️ ADVERTENCIA: Los gastos fijos igualan o superan los ingresos. Se requiere análisis detallado del presupuesto."
+        
+        # Calcular límites de prima según instrucciones
+        limite_recomendado = ingreso_disponible * 0.10  # 10% máximo recomendado
+        limite_absoluto = ingreso_disponible * 0.15     # 15% límite absoluto
+        
+        resultado = f"""
+📊 ANÁLISIS DE CAPACIDAD DE PAGO:
+• Ingresos mensuales: €{cliente.ingresos_mensuales:,.0f}
+• Gastos fijos: €{cliente.gastos_fijos_mensuales:,.0f}
+• Ingreso disponible: €{ingreso_disponible:,.0f}
+• Prima máxima recomendada (10%): €{limite_recomendado:,.0f}/mes
+• Prima límite absoluto (15%): €{limite_absoluto:,.0f}/mes
+
+💡 RECOMENDACIÓN: Ajustar cotizaciones para que la prima no exceda €{limite_recomendado:,.0f} mensuales.
+"""
+        return resultado
+        
+    except Exception as e:
+        return f"⚠️ Error calculando capacidad de pago: {e}"

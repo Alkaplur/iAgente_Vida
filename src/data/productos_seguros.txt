@@ -3,56 +3,66 @@
 
 # === SEGUROS DE VIDA TÉRMINO ===
 
-VIDA_TERMINO|Vida Término Básico|fallecimiento|Seguro temporal por 10-30 años, prima nivelada durante el período|ninguna|Familias jóvenes, necesidades temporales|Protección temporal a precio accesible. Ideal para cubrir hipoteca o mientras los hijos son dependientes.
+VIDA_TERMINO|Vida Término Básico|fallecimiento|Seguro temporal por 10 años renovable, cobertura entre $100,000 y $1,000,000, en múltiplos de $25,000. Prima nivelada durante el período inicial. Renovable sin evidencia médica hasta los 85 años.|waiver_of_premium,accidental_death|Familias jóvenes, necesidades temporales|Protección temporal asequible. Ideal para cubrir hipoteca, préstamos o mientras los hijos son dependientes.
 
-VIDA_TERMINO|Vida Término Renovable|fallecimiento|Seguro temporal renovable sin examen médico|accidentes_personales|Personas 25-55 años, ingresos variables|Flexibilidad total. Renueva automáticamente sin revisión médica. Perfecto para ingresos variables.
+VIDA_TERMINO|Vida Término Renovable|fallecimiento|Seguro temporal renovable anualmente. Permite mantener cobertura aunque aumente la edad o cambie el estado de salud. Incremento de prima en cada renovación.|accidentes_personales|Personas 25-55 años, ingresos variables|Flexibilidad total. Renueva automáticamente sin revisión médica. Perfecto para ingresos variables o situaciones temporales.
 
-VIDA_TERMINO|Vida Término Familiar|fallecimiento|Cobertura temporal para toda la familia en una póliza|fallecimiento_conyuge,accidentes_hijos|Familias con hijos menores|Una sola póliza protege a toda la familia. Ahorro significativo vs. pólizas individuales.
+VIDA_TERMINO|Vida Término Familiar|fallecimiento|Cobertura temporal para toda la familia en una sola póliza. Vigencia habitual 10-30 años. Cobertura mínima $100,000.|fallecimiento_conyuge,accidentes_hijos|Familias con hijos menores|Una sola póliza protege a toda la familia. Ahorro significativo frente a pólizas individuales.
 
-VIDA_TERMINO|Vida Término Plus|fallecimiento|Término convertible a seguro permanente|conversion_garantizada,prima_nivel|Jóvenes profesionales, planificación a futuro|Comienza temporal, convierte a permanente cuando mejoren tus ingresos. Sin nueva evaluación médica.
+VIDA_TERMINO|Vida Término Plus|fallecimiento|Término convertible a seguro permanente (Whole Life) sin nueva evidencia médica. Primas niveladas durante el término inicial. Cobertura mínima $100,000.|conversion_garantizada,prima_nivel|Jóvenes profesionales, planificación a futuro|Comienza temporal, convierte a permanente cuando mejoren ingresos. Protección flexible y escalable.
 
-VIDA_TERMINO|Hipoteca Protegida|fallecimiento|Cobertura que disminuye con el saldo de la hipoteca|invalidez_total|Propietarios de vivienda|Tu familia nunca perderá la casa. La cobertura se ajusta al saldo pendiente de la hipoteca.
+VIDA_TERMINO|Hipoteca Protegida|fallecimiento|Cobertura decreciente ligada al saldo pendiente de la hipoteca. Evita que la familia pierda la vivienda.|invalidez_total,accidental_death|Propietarios de vivienda|La cobertura se ajusta al saldo de la hipoteca, asegurando que los herederos puedan mantener la casa.
 
 # === SEGUROS DE VIDA COMPLETA ===
 
-VIDA_COMPLETA|Vida Completa Tradicional|fallecimiento+valor_efectivo|Seguro permanente con acumulación de valor en efectivo|prestamos_poliza,dividendos|Planificación patrimonial, ahorro conservador|Protección permanente + ahorro garantizado. Nunca expira, construye patrimonio familiar.
+VIDA_COMPLETA|Vida Completa Tradicional|fallecimiento+valor_efectivo|Seguro permanente hasta los 99 años o fallecimiento. Genera valor de rescate garantizado tras 3 años de pago de primas. Posibilidad de póliza pagada (Paid-Up) tras cierto periodo.|prestamos_poliza,dividendos|Planificación patrimonial, ahorro conservador|Protección de por vida + ahorro garantizado. Construye patrimonio familiar. Ideal para herencia.
 
-VIDA_COMPLETA|Vida Completa Premium|fallecimiento+valor_efectivo|Vida completa con dividendos participativos|dividendos_anuales,prestamos_preferenciales|Altos ingresos, planificación fiscal|Protección + inversión + beneficios fiscales. Los dividendos pueden reducir las primas futuras.
+VIDA_COMPLETA|Vida Completa Premium|fallecimiento+valor_efectivo|Vida completa participativa. Genera dividendos anuales que pueden reducir primas, aumentar cobertura o acumular valor.|dividendos_anuales,prestamos_preferenciales|Altos ingresos, planificación fiscal|Protección + inversión + beneficios fiscales. Los dividendos pueden reducir primas o aumentar valor.
 
-VIDA_COMPLETA|Vida Completa Familiar|fallecimiento+valor_efectivo|Póliza que cubre múltiples miembros de la familia|cobertura_hijos,beneficios_educacion|Familias establecidas, patrimonio familiar|Protege y construye patrimonio para toda la familia. Los hijos quedan asegurados de por vida.
+VIDA_COMPLETA|Vida Completa Familiar|fallecimiento+valor_efectivo|Póliza que cubre a múltiples miembros de la familia. Asegura a hijos desde el nacimiento.|cobertura_hijos,beneficios_educacion|Familias establecidas, patrimonio familiar|Protege a toda la familia y construye patrimonio. Los hijos quedan asegurados de por vida.
 
-VIDA_COMPLETA|Vida Completa Ejecutiva|fallecimiento+valor_efectivo|Diseñada para altos patrimonios con beneficios fiscales|split_dollar,key_person|Ejecutivos, empresarios|Optimización fiscal avanzada. Protege patrimonio personal y empresarial simultáneamente.
+VIDA_COMPLETA|Vida Completa Ejecutiva|fallecimiento+valor_efectivo|Diseñada para altos patrimonios, con opciones de planificación fiscal y empresarial (split dollar, key person).|split_dollar,key_person|Ejecutivos, empresarios|Optimización fiscal y protección de patrimonio personal y empresarial.
 
-VIDA_COMPLETA|Vida Completa Pago Limitado|fallecimiento+valor_efectivo|Primas por período limitado, cobertura de por vida|primas_10_20_anos,valor_garantizado|Ingresos altos temporales, profesionales|Paga solo 10-20 años, protección de por vida. Ideal para deportistas o profesionales con picos de ingresos.
+VIDA_COMPLETA|Vida Completa Pago Limitado|fallecimiento+valor_efectivo|Paga primas solo durante 10 o 20 años. Después, cobertura de por vida sin más pagos. Mantiene valor garantizado.|primas_10_20_anos,valor_garantizado|Ingresos altos temporales, profesionales|Ideal para quienes tienen picos de ingresos y desean evitar pagos de prima en el futuro.
 
 # === SEGUROS DE VIDA CON AHORRO ===
 
-VIDA_AHORRO|Vida Universal|fallecimiento+inversion|Seguro flexible con componente de inversión|flexibilidad_primas,opciones_inversion|Ingresos variables, inversionistas activos|Máxima flexibilidad. Ajusta primas y cobertura según tus necesidades cambiantes.
+VIDA_AHORRO|Vida Universal|fallecimiento+inversion|Seguro flexible con componente de inversión. El asegurado puede modificar primas, cobertura y asignaciones a fondos. Sin valor garantizado, riesgo de inversión asumido por el cliente.|flexibilidad_primas,opciones_inversion|Ingresos variables, inversionistas activos|Máxima flexibilidad. Ajusta primas y cobertura. Combina protección y ahorro a medida.
 
-VIDA_AHORRO|Vida Universal Garantizada|fallecimiento+ahorro_garantizado|Vida universal con rendimientos mínimos garantizados|rendimiento_minimo_3porciento,proteccion_inflacion|Perfil conservador, aversión al riesgo|Combina protección con ahorro seguro. Rendimiento mínimo garantizado del 3% anual.
+VIDA_AHORRO|Vida Universal Garantizada|fallecimiento+ahorro_garantizado|Vida universal con rendimiento mínimo garantizado (ej. 3% anual). Cobertura de por vida. Protección contra inflación.|rendimiento_minimo_3porciento,proteccion_inflacion|Perfil conservador, aversión al riesgo|Combina protección con ahorro seguro. Ideal para clientes conservadores que quieren estabilidad.
 
-VIDA_AHORRO|Vida Ahorro Plus|fallecimiento+fondos_inversion|Seguro con múltiples opciones de fondos de inversión|10_fondos_diferentes,rebalanceo_automatico|Inversionistas experimentados, patrimonio medio-alto|Protección + portfolio de inversión profesional. 10 fondos diferentes para diversificar.
+VIDA_AHORRO|Vida Ahorro Plus|fallecimiento+fondos_inversion|Seguro con múltiples fondos de inversión (unit-linked). Ofrece rebalanceo automático y diversidad de carteras.|10_fondos_diferentes,rebalanceo_automatico|Inversionistas experimentados, patrimonio medio-alto|Protección + portafolio de inversión profesional. Permite diversificar y buscar rentabilidad.
 
-VIDA_AHORRO|Vida Universitaria|fallecimiento+ahorro_educacion|Específico para financiar educación universitaria|beneficio_educacion,becas_academicas|Padres con hijos pequeños|Garantiza la educación universitaria de tus hijos. Beneficios adicionales por rendimiento académico.
+VIDA_AHORRO|Vida Universitaria|fallecimiento+ahorro_educacion|Diseñado para financiar estudios universitarios. Paga un capital o renta cuando el hijo alcanza la edad universitaria.|beneficio_educacion,becas_academicas|Padres con hijos pequeños|Asegura el futuro académico de los hijos. Ofrece beneficios extra si obtienen buenas calificaciones.
 
-VIDA_AHORRO|Vida Jubilación|fallecimiento+pension_complementaria|Seguro que se convierte en renta vitalicia|renta_vitalicia,opciones_beneficiario|Planificación jubilación, +40 años|Protección hoy, pensión mañana. Garantiza ingresos de por vida en la jubilación.
+VIDA_AHORRO|Vida Jubilación|fallecimiento+pension_complementaria|Seguro que se convierte en renta vitalicia al llegar a la edad de jubilación. Garantiza ingresos de por vida.|renta_vitalicia,opciones_beneficiario|Planificación jubilación, mayores de 40 años|Protección hoy, pensión mañana. Garantiza estabilidad financiera en la jubilación.
 
-VIDA_AHORRO|Vida Empresarial|fallecimiento+beneficios_empresa|Para empresarios, combina protección personal y empresarial|buy_sell_agreement,financiamiento_empresa|Empresarios, socios de empresas|Protege familia y empresa. Facilita transferencia de participaciones societarias.
+VIDA_AHORRO|Vida Empresarial|fallecimiento+beneficios_empresa|Seguro para empresarios que combina protección personal y societaria. Incluye acuerdos Buy/Sell y financiación empresarial.|buy_sell_agreement,financiamiento_empresa|Empresarios, socios de empresas|Protege a la familia y la empresa. Facilita la transferencia ordenada de participaciones societarias.
 
-VIDA_AHORRO|Vida Dotal|fallecimiento+maduracion|Paga al final del período o por fallecimiento|capital_garantizado,supervivencia|Ahorro disciplinado, metas específicas|Ahorro forzoso con protección. Si sobrevives, recibes el capital completo.
+VIDA_AHORRO|Vida Dotal|fallecimiento+maduracion|Póliza que paga al asegurado si sobrevive al periodo contratado, o a sus beneficiarios en caso de fallecimiento. Capital garantizado.|capital_garantizado,supervivencia|Ahorro disciplinado, metas específicas|Ahorro forzoso con protección. Perfecta para metas concretas como bodas, estudios, etc.
 
-VIDA_AHORRO|Vida Indexada|fallecimiento+rendimiento_indices|Rendimientos vinculados a índices bursátiles|proteccion_perdidas,participacion_ganancias|Inversionistas moderados, búsqueda rentabilidad|Participa en ganancias del mercado sin riesgo de pérdidas. Lo mejor de ambos mundos.
+VIDA_AHORRO|Vida Indexada|fallecimiento+rendimiento_indices|Vinculada a índices bursátiles. Garantiza no perder dinero en mercados bajistas, pero limita la ganancia máxima.|proteccion_perdidas,participacion_ganancias|Inversionistas moderados|Participa en las subidas del mercado con seguridad frente a caídas. Combina protección y rentabilidad.
+
+# === RIDERS Y COBERTURAS ADICIONALES COMUNES ===
+# Estos riders pueden aplicarse a varios tipos de producto, según cada aseguradora
+
+RIDER|accidental_death|Paga un beneficio adicional si la muerte es accidental.
+RIDER|waiver_of_premium|Exonera el pago de primas si el asegurado queda incapacitado total y permanente.
+RIDER|critical_illness|Anticipa un pago si se diagnostica una enfermedad grave cubierta.
+RIDER|family_income_benefit|Proporciona una renta mensual a la familia en caso de fallecimiento del asegurado.
+RIDER|children_coverage|Añade cobertura de vida para hijos del asegurado.
+RIDER|guaranteed_insurability|Permite aumentar la suma asegurada en el futuro sin pruebas médicas.
+RIDER|convertible_term|Permite convertir seguro temporal a permanente sin evidencia médica.
 
 # === NOTAS DE USO ===
-# - VIDA_TERMINO: Protección temporal, primas bajas, sin valor de rescate
-# - VIDA_COMPLETA: Protección permanente, construye valor en efectivo, primas niveladas
-# - VIDA_AHORRO: Protección + inversión, flexibilidad, potencial de crecimiento
-# 
-# Cada línea representa un producto específico de seguros de vida
-# TIPO_PRODUCTO: VIDA_TERMINO, VIDA_COMPLETA, VIDA_AHORRO
-# NOMBRE_COMERCIAL: Nombre comercial del producto
-# COBERTURA_PRINCIPAL: Tipo de cobertura principal
-# CARACTERISTICAS: Características distintivas del producto
-# COBERTURAS_ADICIONALES: Beneficios adicionales separados por comas
-# PUBLICO_OBJETIVO: A quién va dirigido específicamente
-# ARGUMENTOS_VENTA: Argumentos comerciales para la venta
+# - VIDA_TERMINO: Protección temporal, primas bajas, sin valor de rescate.
+# - VIDA_COMPLETA: Protección permanente, construye valor en efectivo, primas niveladas.
+# - VIDA_AHORRO: Protección + inversión, flexibilidad, potencial de crecimiento.
+# - Las cifras de coberturas mínimas y máximas pueden variar por país o aseguradora.
+
+# === FUENTES DE INFORMACIÓN ===
+# - ACME Term Life Coverage 10 years.docx (póliza real) [38]
+# - ACME Whole Life T&C.docx (póliza real) [39]
+# - Canada LifeInsurance Training-E311-2016-11-3ED.pdf (manual técnico) [40]
+# - motor_cotizacion.txt (tasas y límites técnicos) [36]
+# - productos_seguros.txt original (estructura original del archivo) [37]

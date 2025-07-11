@@ -32,6 +32,32 @@ if os.getenv("LANGCHAIN_TRACING_V2"):
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
 
 
+def process_message(state: EstadoBot) -> EstadoBot:
+    """
+    Función principal para procesar mensajes desde webhooks externos
+    Ejecuta el grafo completo y retorna el estado actualizado
+    """
+    try:
+        # Crear el grafo si no existe
+        graph = crear_grafo()
+        
+        # Ejecutar el grafo con el estado proporcionado
+        result = graph.invoke(state)
+        
+        return result
+        
+    except Exception as e:
+        print(f"❌ Error en process_message: {e}")
+        
+        # Retornar estado con mensaje de error
+        state.mensajes.append({
+            "role": "assistant", 
+            "content": "Disculpa, hubo un problema técnico. ¿Puedes repetir tu consulta?",
+            "timestamp": str(os.getenv("TIMESTAMP", ""))
+        })
+        return state
+
+
 def quote_node(state: EstadoBot) -> Dict[str, Any]:
     """
     Agente especializado en generar cotizaciones basadas en:

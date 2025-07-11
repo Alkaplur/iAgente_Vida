@@ -30,8 +30,10 @@ env/
 .env.bak
 
 # Environment variables with secrets
+.env
 .env.local
 .env.production
+.env.development
 
 # IDE
 .vscode/
@@ -51,6 +53,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+webhook.log
 
 # Cache
 .cache/

@@ -1,0 +1,28 @@
+[global]
+# Configuración global de Streamlit
+developmentMode = false
+logLevel = "info"
+
+[server]
+# Configuración del servidor
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+
+[browser]
+# Configuración del navegador
+gatherUsageStats = false
+showErrorDetails = true
+
+[theme]
+# Tema de la aplicación
+primaryColor = "#0066cc"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+font = "sans serif"
+
+[logger]
+# Configuración de logging
+level = "info"

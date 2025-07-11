@@ -18,10 +18,22 @@ class Settings(BaseSettings):
     # Bot Configuration
     bot_name: str = "iAgente_Vida"
     
-    # Optional WhatsApp Configuration
+    # WhatsApp Business API Configuration
     whatsapp_token: Optional[str] = None
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_verify_token: Optional[str] = None
+    
+    # Chatwoot Configuration
+    chatwoot_base_url: Optional[str] = None
+    chatwoot_account_id: Optional[str] = None
+    chatwoot_user_token: Optional[str] = None
+    chatwoot_platform_token: Optional[str] = None
+    chatwoot_whatsapp_inbox_id: Optional[str] = None
+    
+    # Webhook Configuration
+    webhook_host: str = "0.0.0.0"
+    webhook_port: int = 5000
+    debug: bool = False
     
     # Optional LangChain Configuration
     langchain_tracing_v2: Optional[bool] = None
